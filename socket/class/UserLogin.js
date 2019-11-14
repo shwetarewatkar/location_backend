@@ -1,20 +1,29 @@
 const CryptoJS = require("crypto-js");
+
 module.exports = {
+
   CheckUser: (socket, UserData, Cb) => {
-   
+
+    console.log("userdata:- ", UserData);
+
     var bytes_lat = CryptoJS.AES.decrypt(UserData.latitude, 'Location-Sharing');
     var lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
     var lenoflat = lat.length;
 
+    console.log("checking:- ", lenoflat);
+
+
     let userId = UserData.uid;
     let Socket_id = socket.id;
     socket.uid = userId;
-    
+
+
     if (UserData.calloption) {
-      console.log("not updated");
+      console.log("not update");
     } else {
       UserData["socket_id"] = Socket_id;
     }
+
 
     let Db_query = UserData;
     delete Db_query.uid;
@@ -27,6 +36,7 @@ module.exports = {
     let Conditon = { uid: userId };
 
     if (lenoflat != 0) {
+
       db.collection("userdetails").findOneAndUpdate(
         Conditon,
         Db_query,
@@ -42,8 +52,9 @@ module.exports = {
               Db_query,
               "______________________________________________________"
             );
-            if (UserData.status) 
-            {
+
+            if (UserData.status) {
+
               db.collection("user_location")
                 .find({
                   uid: userId.toString(),
@@ -52,9 +63,11 @@ module.exports = {
                 })
                 .toArray(function (e, checkExistance) {
                   if (e)
-                    console.log("Error in finding location before insert ", e);
+                    console.log("Error in find location query before insert ", e);
                   else {
+                    // console.log("\nCheckUserExsists ---------", checkExistance);
                     if (checkExistance.length == 0) {
+
                       db.collection("user_location").insertOne(
                         {
                           uid: userId.toString(),
@@ -63,7 +76,7 @@ module.exports = {
                           cd: new Date()
                         },
                         function (er, inserted) {
-                          if (er) console.log("error in insertion ", er);
+                          if (er) console.log("error in insertation ", er);
                           else {
                             if (inserted.ops[0]) {
                               // console.log("data is inserted successfully");
@@ -78,21 +91,10 @@ module.exports = {
 
             Cb({ user_status: true, user_info: user_info });
             common.BroadcastMemberList(userId, UserList => {
-              
+
               console.log("userlist:- ", UserList);
 
               if (UserList != undefined && UserList != null) {
-
-                var userhistorydata = {
-                  uid: userId,
-                  latitude: UserData.latitude,
-                  longitude: UserData.longitude,
-                  cd: new Date()
-                }
-
-                console.log("history in :- ", userhistorydata);
-
-                db.collection('userhistory').insertOne(userhistorydata, function (err, userHistoryData) { });
 
                 for (let i = 0; i < UserList.length; i++) {
                   console.log("Location update sent", UserList[i]);
@@ -105,15 +107,146 @@ module.exports = {
                     }
                   });
                 }
+
+
               }
+
+
+
             });
+
+
+
           } else {
-            logger("__________________user id not matched____________");
+            logger("__________________userid not matched____________");
             Cb({ user_status: false, user_info: user_info });
           }
         }
       );
+
+
     }
+
+  },
+
+  GetUserGroups: (socket, Cb) => {
+    if (socket.uid) {
+      // db.collection("groups")
+      //   .find({ uid: socket.uid })
+      //   .toArray((err, DbResp) => {
+      //     if (err) throw err;
+      //     logger("_____________________groups fetched_____________________");
+      //     Cb({ groups: DbResp, error: null });
+      //   });
+
+      db.collection('groups').find({ members: { $in: [socket.uid.toString()] } }).toArray(function (err, DbResp) {
+
+        if (err) {
+          throw err;
+        }
+        Cb({ groups: DbResp, error: null });
+
+      });
+    } else {
+      logger("______________________user not loggedin__________________");
+      Cb({ error: "user not loggedin" });
+    }
+  },
+
+  AddGroup: (socket, groupInfo, Cb) => {
+    let uid = groupInfo.uid;
+    let GrpName = groupInfo.GroupName;
+    if (uid == socket.uid) {
+      common.CheckUserExsists(uid, Exsists => {
+        if (Exsists == true) {
+          db.collection("groups").insertOne(
+            {
+              uid: uid,
+              groupname: GrpName,
+              default: false,
+              members: [uid],
+              date: new Date()
+            },
+            (err, DbResp) => {
+              if (err) throw err;
+
+
+              var bytes_lat = CryptoJS.AES.decrypt(groupInfo.plain_lat.toString(), 'Location-Sharing');
+              var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+
+              var bytes_long = CryptoJS.AES.decrypt(groupInfo.plain_long.toString(), 'Location-Sharing');
+              var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+
+              var group_ciphertext_key = CryptoJS.AES.encrypt(JSON.stringify(DbResp.insertedId), 'Location-Sharing');
+              var group_key = group_ciphertext_key.toString();
+
+             
+
+              var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_lat), group_key);
+              var new_latitude = latitude_ciphertext.toString();
+
+              var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_long), group_key);
+              var new_longitude = longitude_ciphertext.toString();
+
+              var newgroupdata = {
+                uid: uid,
+                gid: group_key,
+                latitude: new_latitude,
+                longitude: new_longitude,
+              }
+
+              db.collection('groupsinfo').insertOne(newgroupdata, function (err, newGroupData) { });
+
+              UserLogin.GetUserGroups(socket, GroupsData => {
+                if (GroupsData.error == null) {
+                  logger(
+                    "______________________Added to group__________________",
+                    GrpName
+                  );
+                  logger(
+                    "+++++++++++++++++++++ Response Sent AddGroup +++++++++++++++++++++"
+                  );
+                  socket.emit("res", {
+                    event: "GroupList",
+                    data: GroupsData.groups
+                  });
+                }
+              });
+            }
+          );
+        } else {
+          // console.log("=> User Does Not exsists <=");
+        }
+      });
+    }
+  },
+
+  RemoveGroup: (socket, groupInfo, Cb) => {
+    // console.log("hp040", groupInfo);
+
+    let GrpId = ObjectId(groupInfo.groupId);
+    // console.log("sfsdfsdfsf=====>>", GrpId);
+
+    db.collection("groups").deleteOne(
+      { $and: [{ _id: GrpId }, { default: false }] },
+      (err, DbResp) => {
+        if (err) throw err;
+        UserLogin.GetUserGroups(socket, GroupsData => {
+          if (GroupsData.error == null) {
+            logger("______________________group removed__________________");
+            logger(
+              "+++++++++++++++++++++ Response Sent RemoveGroup +++++++++++++++++++++"
+            );
+
+            socket.emit("res", {
+              event: "GroupList",
+              data: GroupsData.groups
+            });
+          }
+        });
+        // Cb();
+      }
+    );
   },
 
   AddMember: (socket, GroupInfo, Cb) => {
@@ -165,7 +298,7 @@ module.exports = {
 
               if (DbResp.result.n >= 1 && DbResp.result.nModified == 0) {
                 Cb({
-                  error: "Entered invite code already exist in this group."
+                  error: "Entered invite code is already exist this group."
                 });
               }
               logger(
@@ -185,117 +318,6 @@ module.exports = {
     }
   },
 
-  GetUserGroups: (socket, Cb) => {
-    if (socket.uid) {
-      // db.collection("groups")
-      //   .find({ uid: socket.uid })
-      //   .toArray((err, DbResp) => {
-      //     if (err) throw err;
-      //     logger("_____________________groups fetched_____________________");
-      //     Cb({ groups: DbResp, error: null });
-      //   });
-
-      db.collection('groups').find({ members: { $in: [socket.uid.toString()] } }).toArray(function (err, DbResp) {
-
-        if (err) {
-          throw err;
-        }
-        Cb({ groups: DbResp, error: null });
-
-      });
-    } else {
-      logger("______________________user not logged in__________________");
-      Cb({ error: "user not logged in" });
-    }
-  },
-
-  AddGroup: (socket, groupInfo, Cb) => {
-    let uid = groupInfo.uid;
-    let GrpName = groupInfo.GroupName;
-    if (uid == socket.uid) {
-      common.CheckUserExsists(uid, Exsists => {
-        if (Exsists == true) {
-          db.collection("groups").insertOne(
-            {
-              uid: uid,
-              groupname: GrpName,
-              default: false,
-              members: [uid],
-              date: new Date()
-            },
-            (err, DbResp) => {
-              if (err) throw err;
-
-              var group_ciphertext_key = CryptoJS.AES.encrypt(JSON.stringify(DbResp.insertedId), 'Location-Sharing');
-              var group_key = group_ciphertext_key.toString();
-
-              var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(groupInfo.plain_lat), group_key);
-              var new_latitude = latitude_ciphertext.toString();
-
-              var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(groupInfo.plain_long), group_key);
-              var new_longitude = longitude_ciphertext.toString();
-
-              var newgroupdata = {
-                uid: uid,
-                gid: group_key,
-                latitude: new_latitude,
-                longitude: new_longitude,
-              }
-
-              db.collection('groupsinfo').insertOne(newgroupdata, function (err, newGroupData) { });
-
-              UserLogin.GetUserGroups(socket, GroupsData => {
-                if (GroupsData.error == null) {
-                  logger(
-                    "______________________Added to group__________________",
-                    GrpName
-                  );
-                  logger(
-                    "+++++++++++++++++++++ Response Sent AddGroup +++++++++++++++++++++"
-                  );
-                  socket.emit("res", {
-                    event: "GroupList",
-                    data: GroupsData.groups
-                  });
-                }
-              });
-            }
-          );
-        } else {
-          // console.log("=> User Does Not exsists <=");
-        }
-      });
-    }
-  },
-
-  RemoveGroup: (socket, groupInfo, Cb) => {
-    
-    let GrpId = ObjectId(groupInfo.groupId);
-    
-    db.collection("groups").deleteOne(
-      { $and: [{ _id: GrpId }, { default: false }] },
-      (err, DbResp) => {
-        if (err) throw err;
-        UserLogin.GetUserGroups(socket, GroupsData => {
-          if (GroupsData.error == null) {
-            logger("______________________group removed__________________");
-            logger(
-              "+++++++++++++++++++++ Response Sent RemoveGroup +++++++++++++++++++++"
-            );
-
-            socket.emit("res", {
-              event: "GroupList",
-              data: GroupsData.groups
-            });
-          }
-        });
-        // Cb();
-      }
-    );
-  },
-
-  
-
   GetGroupMembers: (socket, GroupInfo, Cb) => {
     let uid = GroupInfo.uid;
     let GrpId = ObjectId(GroupInfo.GroupId);
@@ -304,7 +326,7 @@ module.exports = {
         .find({ _id: GrpId })
         .toArray((err, DbResp) => {
           if (err) throw err;
-          // console.log("%%%%", DbResp);
+          console.log("%%%%", DbResp);
           let members = DbResp[0].members.map(Member_id => {
             let temp = { uid: Member_id };
             return temp;

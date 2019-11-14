@@ -50,7 +50,10 @@ let options = {
 /* ---------------- SSL Certificate Files Ends  -------------------*/
 
 /* ---------------- Creating Https Server -------------------*/
-let app = https.createServer(options,(req, res) => {
+let app = https.createServer(options, (req, res) => {
+
+// let app = http.createServer((req, res) => {
+
   console.log("started");
 
   if (req.url === "/") {
@@ -74,6 +77,7 @@ io.sockets.on("connection", socket => {
       case "Auth":
         UserLogin.CheckUser(socket, value, status => {
           logger(status.user_status);
+
           socket.emit("res", {
             event: "Auth_Status",
             data: {
@@ -83,36 +87,15 @@ io.sockets.on("connection", socket => {
           });
         });
         break;
-        
-        case "AddMember":
-          logger("======================= AddMember =========================");
-          UserLogin.AddMember(socket, value, GroupsData => {
-            if (GroupsData.error == null) {
-              logger(
-                "+++++++++++++++++++++ Response Sent AddMember +++++++++++++++++++++"
-              );
-              socket.emit("res", {
-                event: "AddMemebrResp",
-                data: { error: null }
-              });
-            } else {
-              logger(
-                "+++++++++++++++++++++ Response Sent Member Not Exists AddMember +++++++++++++++++++++"
-              );
-              socket.emit("res", {
-                event: "AddMemebrResp",
-                data: { error: GroupsData.error }
-              });
-            }
-          });
-          break;
 
       case "newLocationReq":
+
         console.log("new location data:- ", value);
         db.collection("userdetails").findOneAndUpdate({ uid: value.uid }, (err, DbResp) => {
-        });
-        break;
 
+        });
+
+        break;
       case "GetGroupsList":
         logger(
           "======================= GetGroupsList ========================="
@@ -126,23 +109,41 @@ io.sockets.on("connection", socket => {
           }
         });
         break;
-
       case "AddGroup":
         logger("======================= AddGroup =========================");
         UserLogin.AddGroup(socket, value, GroupsData => { });
         break;
-
       case "DeleteGroup":
         logger("======================= DeleteGroup =========================");
         UserLogin.RemoveGroup(socket, value, resp => { });
         break;
-
-      
-
+      case "AddMember":
+        logger("======================= AddMember =========================");
+        UserLogin.AddMember(socket, value, GroupsData => {
+          if (GroupsData.error == null) {
+            logger(
+              "+++++++++++++++++++++ Response Sent AddMember +++++++++++++++++++++"
+            );
+            socket.emit("res", {
+              event: "AddMemebrResp",
+              data: { error: null }
+            });
+          } else {
+            logger(
+              "+++++++++++++++++++++ Response Sent Member Not Exists AddMember +++++++++++++++++++++"
+            );
+            socket.emit("res", {
+              event: "AddMemebrResp",
+              data: { error: GroupsData.error }
+            });
+          }
+        });
+        break;
       case "GetMemeberList":
         logger(
           "======================= GetMemeberList ========================="
         );
+        // console.log("@@@@@@@@@@ ", value);
         UserLogin.GetGroupMembers(socket, value, GroupsMembers => {
           if (GroupsMembers) {
             logger(
@@ -155,7 +156,6 @@ io.sockets.on("connection", socket => {
           }
         });
         break;
-
       case "RemoveMember":
         logger(
           "======================= RemoveMember ========================="
@@ -170,7 +170,7 @@ io.sockets.on("connection", socket => {
                 if (GroupsMembers) {
                   logger("Member Removed From Group response sent");
                   logger(
-                    "+++++++++++++++++++++ Response Sent Remove Member +++++++++++++++++++++"
+                    "+++++++++++++++++++++ Response Sent RemoveMember +++++++++++++++++++++"
                   );
                   socket.emit("res", {
                     event: "GroupMemberList",
@@ -182,7 +182,6 @@ io.sockets.on("connection", socket => {
           }
         });
         break;
-
       case "GetPeopleList":
         logger(
           "======================= GetPeopleList ========================="
@@ -190,7 +189,7 @@ io.sockets.on("connection", socket => {
         UserLogin.GetPopleList(socket, value, PeopleList => {
           logger("user List", PeopleList);
           if (PeopleList) {
-            logger("pople list Response sent");
+            logger("pople listResponse sent");
             logger(
               "+++++++++++++++++++++ Response Sent GetPeopleList +++++++++++++++++++++"
             );
@@ -201,9 +200,8 @@ io.sockets.on("connection", socket => {
           }
         });
         break;
-
       case "UpdateLocation":
-        // console.log("inside the UpdateLocation case ", data);
+        console.log("inside the UpdateLocation case ", data);
 
         db.collection("user_location")
           .find({
@@ -213,9 +211,9 @@ io.sockets.on("connection", socket => {
           })
           .toArray(function (e, checkExistance) {
             if (e)
-              console.log("Error in finding location before insert ", e);
+              console.log("Error in find location query before insert ", e);
             else {
-              console.log("\nUpdateLocation CheckUserExsists ---------", checkExistance);
+              console.log("\nUpdateLocation ssss CheckUserExsists ---------", checkExistance);
               // ,checkExistance
 
               var bytes_lat = CryptoJS.AES.decrypt(value.latitude, 'Location-Sharing');
@@ -238,7 +236,7 @@ io.sockets.on("connection", socket => {
                     },
                     function (er, inserted) {
                       if (er)
-                        console.log("Update Location error in insertion ", er);
+                        console.log("UpdateLocation error in insertation ", er);
                       else {
                         if (inserted.ops[0]) {
                           // console.log(
@@ -257,40 +255,110 @@ io.sockets.on("connection", socket => {
           .find({
             uid: value.uid.toString()
           })
-          .toArray(function (e, checkExistanceInfo) {
-            if (e)
-              console.log("Error in finding location query before insert ", e);
+          .toArray(function (err, checkExistanceInfo) {
+            if (err)
+              console.log("Error in find location query before insert ", err);
             else {
-              let decryptedData_lat = checkExistanceInfo[0].latitude;
-              var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), checkExistanceInfo[0].gid);
-              var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
 
-              let decryptedData_long = checkExistanceInfo[0].longitude;
-              var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), checkExistanceInfo[0].gid);
-              var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+              var bytes_lat = CryptoJS.AES.decrypt(value.latitude, 'Location-Sharing');
+              var lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
 
-              if (value.plain_lat != get_lat && value.plain_long != get_long) {
+              var bytes_long = CryptoJS.AES.decrypt(value.longitude, 'Location-Sharing');
+              var long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
 
-                var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(value.plain_lat), checkExistanceInfo[0].gid);
-                var new_latitude = latitude_ciphertext.toString();
+              console.log("latitude value.latitude:- ", value.latitude);
 
-                var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(value.plain_long), checkExistanceInfo[0].gid);
-                var new_longitude = longitude_ciphertext.toString();
+              console.log("checkExistanceInfo here", checkExistanceInfo);
 
-                var updata = {
-                  latitude: new_latitude,
-                  longitude: new_longitude,
+              checkExistanceInfo.forEach((elm, i) => {
+
+                let decryptedData_lat = elm.latitude;
+                var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), elm.gid);
+                var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+
+                let decryptedData_long = elm.longitude;
+                var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), elm.gid);
+                var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+
+                if (lat != get_lat && long != get_long) {
+
+                  console.log("update karo");
+
+                  var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(lat), elm.gid);
+                  var new_latitude = latitude_ciphertext.toString();
+
+                  var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(long), elm.gid);
+                  var new_longitude = longitude_ciphertext.toString();
+
+                  var updata = {
+                    latitude: new_latitude,
+                    longitude: new_longitude,
+                  }
+
+                  console.log("update data:- ", updata);
+
+                  db.collection('groupsinfo').findOneAndUpdate({ _id: ObjectId(elm._id.toString()) }, { $set: updata }, function (err, resp) {
+                    if (err) {
+                      console.log("groupsinfo is not updated");
+                    } else {
+                      console.log("groupsinfo update succesfully");
+                    }
+                  });
+
+
+                  var location_history_data = {
+                    uid: value.uid.toString(),
+                    gid: elm.gid,
+                    latitude: new_latitude,
+                    longitude: new_longitude,
+                    cd: new Date()
+                  }
+
+                  db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
+
+
+                } else {
+
+                  console.log("not update");
+
                 }
 
-                db.collection('groupsinfo').findOneAndUpdate({ uid: value.uid }, { $set: updata }, { multi: true }, function (err, resp) {
-                  if (err) {
-                    console.log("groups info not updated");
-                  } else {
-                    console.log("groups info updated succesfully");
-                  }
-                });
+              });
 
-              }
+              // let decryptedData_lat = checkExistanceInfo[0].latitude;
+              // var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), checkExistanceInfo[0].gid);
+              // var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+
+              // let decryptedData_long = checkExistanceInfo[0].longitude;
+              // var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), checkExistanceInfo[0].gid);
+              // var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+
+              // if (value.plain_lat != get_lat && value.plain_long != get_long) {
+
+              //   console.log("update karo");
+
+              //   var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(value.plain_lat), checkExistanceInfo[0].gid);
+              //   var new_latitude = latitude_ciphertext.toString();
+
+              //   var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(value.plain_long), checkExistanceInfo[0].gid);
+              //   var new_longitude = longitude_ciphertext.toString();
+
+              //   var updata = {
+              //     latitude: new_latitude,
+              //     longitude: new_longitude,
+              //   }
+
+              //   console.log("update data:- ", updata);
+
+              //   db.collection('groupsinfo').findOneAndUpdate({ uid: value.uid }, { $set: updata }, { multi: true }, function (err, resp) {
+              //     if (err) {
+              //       console.log("groupsinfo is not updated");
+              //     } else {
+              //       console.log("groupsinfo update succesfully");
+              //     }
+              //   });
+
+              // }
             }
           });
 
@@ -302,37 +370,74 @@ io.sockets.on("connection", socket => {
           .find({
             uid: value.uid.toString()
           })
-          .toArray(function (e, checkExistanceInfo) {
-            if (e)
-              console.log("Error in finding location before insert ", e);
+          .toArray(function (err, checkExistanceInfo) {
+            if (err)
+              console.log("Error in find location query before insert ", err);
             else {
 
-              myData = [];
-              checkExistanceInfo.forEach(e => {
+              console.log("check info:- ", checkExistanceInfo);
 
-                let decryptedData_lat = e.latitude;
-                var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), 'Location-Sharing');
+              myData = [];
+              checkExistanceInfo.forEach(elm => {
+
+                let decryptedData_gid = elm.gid;
+                var bytes_gid = CryptoJS.AES.decrypt(decryptedData_gid.toString(), 'Location-Sharing');
+                var get_gid = JSON.parse(bytes_gid.toString(CryptoJS.enc.Utf8));
+
+                let decryptedData_lat = elm.latitude;
+                var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), elm.gid);
                 var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
 
-                let decryptedData_long = e.longitude;
-                var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), 'Location-Sharing');
+                let decryptedData_long = elm.longitude;
+                var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), elm.gid);
                 var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
 
-                myData.push({ lat: Number(get_lat), lng: Number(get_long) })
+                console.log("get gid:- ", get_gid);
+
+                if (value.gid.toString() == get_gid) {
+                  console.log("get group data____________________:- ", elm);
+                  myData.push({ lat: Number(get_lat), lng: Number(get_long) })
+                }
 
               });
 
-              console.log("final data:- ", myData);
-              socket.emit("res", {
-                event: "getHistory",
-                data: myData
-              });
+              if (myData) {
+                socket.emit("res", {
+                  event: "getHistory",
+                  data: myData
+                });
+              }
+
+              // console.log("all data:- ", myData);
+
+              // myData = [];
+              // checkExistanceInfo.forEach(e => {
+
+              //   let decryptedData_lat = e.latitude;
+              //   var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), 'Location-Sharing');
+              //   var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+
+              //   let decryptedData_long = e.longitude;
+              //   var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), 'Location-Sharing');
+              //   var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+
+              //   myData.push({ lat: Number(get_lat), lng: Number(get_long) })
+
+              // });
+
+              // console.log("final data:- ", myData);
+              // socket.emit("res", {
+              //   event: "getHistory",
+              //   data: myData
+              // });
 
             }
           });
 
         break;
       case "userDetails":
+        // console.log("\ninside the case userDetails ");
+        // , data
         if (data.data.uid) {
           // console.log("uid is define ", data.data.uid);
           db.collection("user_location")

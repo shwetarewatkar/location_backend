@@ -8,7 +8,8 @@
     "start": "app.js"
   },
   "repository": {
-    "type": "git"
+    "type": "git",
+    "url": "http://gitlab.artoon.in/node-js/location-sharing.git"
   },
   "keywords": [],
   "author": "",

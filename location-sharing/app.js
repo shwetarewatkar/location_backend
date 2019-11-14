@@ -1,5 +1,4 @@
 var https = require('https');
-var http = require('http');
 var fs = require('fs');
 var bodyParser = require('body-parser');
 var express = require('express');
@@ -59,7 +58,5 @@ app.use('/api', apiRoutes);
 // ADD API
 app.post('/location/add', location.addLocation);
 
-var server = https.createServer(options,app).listen(3000, () =>{
-    console.log("Application is running on ",server.address().port);
-});
+https.createServer(options, app).listen(3000);
 // app.listen(3000);

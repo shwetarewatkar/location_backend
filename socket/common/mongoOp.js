@@ -1,45 +1,4 @@
 module.exports = {
-  BroadcastMemberList: (UserId, Cb) => {
-    console.log("user id:- ", UserId);
-    db.collection("groups")
-      .find({
-        members: { $in: [UserId] }
-      })
-      .project({ _id: 1, uid: 1, groupname: 1 })
-      .toArray((err, temp) => {
-        console.log("temp data:- ", temp);
-        // console.log(DbResp);
-        let uid = [];
-        let group = [];
-        DbResp = temp.map(elem => {
-          console.log("element:- ", elem.uid);
-          if (uid.includes(elem.uid) == false) {
-            uid.push(elem.uid);
-            console.log("inside if:- ", uid);
-            let tmp = {};
-            tmp[elem.groupname] = elem._id;
-            group.push(tmp);
-            return {
-              uid: elem.uid
-            };
-          }
-        });
-
-        DbResp = __.compact(DbResp);
-        console.log("dbresp: ", DbResp);
-
-        // var tamp_resp = [{uid:"O7csU9a4BmhIs6FGtcR8qFvUXUC2"},{uid:"Hgl7ErGFYnMGUf621KAnTZjkzgi2"}];
-        db.collection("userdetails").distinct(
-          "socket_id",
-          { $or: DbResp ,socket_id:{ $ne: ""}},
-          (err, DbRespsocket) => {
-            console.log("db response:- ", DbRespsocket);
-            Cb(DbRespsocket);
-          }
-        );
-      });
-  },
-
   GetUserByInvite: (invite, Cb) => {
     db.collection("userdetails")
       .find({ invitecode: invite })
@@ -92,9 +51,59 @@ module.exports = {
       });
   },
 
+  BroadcastMemberList: (UserId, Cb) => {
+
+    console.log("user id:- ", UserId);
+
+    db.collection("groups")
+      .find({
+        members: { $in: [UserId] }
+      })
+      .project({ _id: 1, uid: 1, groupname: 1 })
+      .toArray((err, temp) => {
+
+        console.log("temp data:- ", temp);
+
+        // console.log(DbResp);
+        let uid = [];
+        let group = [];
+        DbResp = temp.map(elem => {
+          console.log("element:- ", elem.uid);
+          if (uid.includes(elem.uid) == false) {
+            uid.push(elem.uid);
+            console.log("inside if:- ", uid);
+            let tmp = {};
+            tmp[elem.groupname] = elem._id;
+            group.push(tmp);
+            return {
+              uid: elem.uid
+            };
+          }
+        });
+
+        DbResp = __.compact(DbResp);
+        console.log("dbresp: ", DbResp);
+
+        // var tamp_resp = [{uid:"O7csU9a4BmhIs6FGtcR8qFvUXUC2"},{uid:"Hgl7ErGFYnMGUf621KAnTZjkzgi2"}];
+        db.collection("userdetails").distinct(
+          "socket_id",
+          { $or: DbResp ,socket_id:{ $ne: ""}},
+          (err, DbRespsocket) => {
+            
+            console.log("db response:- ", DbRespsocket);
+
+            Cb(DbRespsocket);
+
+          }
+        );
+      });
+  },
 
   SocketDisconnect: (Socket_id, Socket_Uid, Cb) => {
-    
+    // console.log("Socket Disconnected", Socket_id);
+    // console.log(
+    //   "%%%%%%%%%%%%%%%%%%%%%%%%%% trying to delete socket id  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+    // );
     console.log({ $and: [{ socket_id: Socket_id }, { uid: Socket_Uid }] });
 
     db.collection("userdetails").findOneAndUpdate(
@@ -109,7 +118,12 @@ module.exports = {
   },
 
   SocketDisconnect_err: (Socket_id, Cb) => {
-   
+    // console.log("Socket Disconnected", Socket_id);
+    // console.log(
+    //   "%%%%%%%%%%%%%%%%%%%%%%%%%% trying to delete socket id  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+    // );
+    // console.log({ socket_id: Socket_id });
+
     db.collection("userdetails").findOneAndUpdate(
       { socket_id: Socket_id },
       { $set: { socket_id: "" } },
