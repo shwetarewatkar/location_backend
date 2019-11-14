@@ -1,0 +1,124 @@
+module.exports = {
+  BroadcastMemberList: (UserId, Cb) => {
+    console.log("user id:- ", UserId);
+    db.collection("groups")
+      .find({
+        members: { $in: [UserId] }
+      })
+      .project({ _id: 1, uid: 1, groupname: 1 })
+      .toArray((err, temp) => {
+        console.log("temp data:- ", temp);
+        // console.log(DbResp);
+        let uid = [];
+        let group = [];
+        DbResp = temp.map(elem => {
+          console.log("element:- ", elem.uid);
+          if (uid.includes(elem.uid) == false) {
+            uid.push(elem.uid);
+            console.log("inside if:- ", uid);
+            let tmp = {};
+            tmp[elem.groupname] = elem._id;
+            group.push(tmp);
+            return {
+              uid: elem.uid
+            };
+          }
+        });
+
+        DbResp = __.compact(DbResp);
+        console.log("dbresp: ", DbResp);
+
+        // var tamp_resp = [{uid:"O7csU9a4BmhIs6FGtcR8qFvUXUC2"},{uid:"Hgl7ErGFYnMGUf621KAnTZjkzgi2"}];
+        db.collection("userdetails").distinct(
+          "socket_id",
+          { $or: DbResp ,socket_id:{ $ne: ""}},
+          (err, DbRespsocket) => {
+            console.log("db response:- ", DbRespsocket);
+            Cb(DbRespsocket);
+          }
+        );
+      });
+  },
+
+  GetUserByInvite: (invite, Cb) => {
+    db.collection("userdetails")
+      .find({ invitecode: invite })
+      .toArray((err, DbResp) => {
+        if (err) throw err;
+        Cb(DbResp);
+      });
+  },
+
+  GetUserById: (MemberId, Cb) => {
+    // console.log("$$$$$$$$$$$$$$$$", MemberId);
+
+    db.collection("userdetails")
+      .find({ $or: MemberId })
+      .toArray((err, DbResp) => {
+        if (err) throw err;
+        // console.log(DbResp);
+        let FinalMemeberList = DbResp.map(Member_Info => {
+          delete Member_Info._id;
+          delete Member_Info.date;
+          delete Member_Info.invitecode;
+          return Member_Info;
+        });
+        // console.log(FinalMemeberList);
+        Cb(FinalMemeberList);
+      });
+  },
+
+  CheckUserExsists: (UserId, Cb) => {
+    db.collection("userdetails")
+      .find({ uid: UserId })
+      .toArray((err, DbResp) => {
+        // console.log(DbResp.length);
+
+        if (DbResp.length == 1) {
+          Cb(true);
+        } else {
+          Cb(false);
+        }
+      });
+  },
+
+  EmailExsists: (UserEmail, Cb) => {
+    db.collection("userdetails")
+      .find({ email: UserEmail })
+      .toArray((err, DbResp) => {
+        // console.log(DbResp.length);
+
+        DbResp.length == 1 ? Cb(true) : Cb(false);
+      });
+  },
+
+
+  SocketDisconnect: (Socket_id, Socket_Uid, Cb) => {
+    
+    console.log({ $and: [{ socket_id: Socket_id }, { uid: Socket_Uid }] });
+
+    db.collection("userdetails").findOneAndUpdate(
+      { $and: [{ socket_id: Socket_id }, { uid: Socket_Uid }] },
+      { $set: { socket_id: "" } },
+      (err, DbResp) => {
+        if (err) throw err;
+        // console.log(DbResp);
+        Cb(DbResp);
+      }
+    );
+  },
+
+  SocketDisconnect_err: (Socket_id, Cb) => {
+   
+    db.collection("userdetails").findOneAndUpdate(
+      { socket_id: Socket_id },
+      { $set: { socket_id: "" } },
+      (err, DbResp) => {
+        if (err) throw err;
+        console.log(DbResp);
+        Cb(DbResp);
+      }
+    );
+  }
+
+};
