@@ -59,7 +59,7 @@ app.use('/api', apiRoutes);
 // ADD API
 app.post('/location/add', location.addLocation);
 
-var server = https.createServer(Option,app).listen(3000, () =>{
+var server = https.createServer(options,app).listen(3000, () =>{
     console.log("Application is running on ",server.address().port);
 });
 // app.listen(3000);
