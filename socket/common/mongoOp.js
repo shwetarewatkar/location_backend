@@ -1,3 +1,5 @@
+const CryptoJS = require("crypto-js");
+
 module.exports = {
   GetUserByInvite: (invite, Cb) => {
     db.collection("userdetails")
@@ -87,9 +89,9 @@ module.exports = {
         // var tamp_resp = [{uid:"O7csU9a4BmhIs6FGtcR8qFvUXUC2"},{uid:"Hgl7ErGFYnMGUf621KAnTZjkzgi2"}];
         db.collection("userdetails").distinct(
           "socket_id",
-          { $or: DbResp ,socket_id:{ $ne: ""}},
+          { $or: DbResp, socket_id: { $ne: "" } },
           (err, DbRespsocket) => {
-            
+
             console.log("db response:- ", DbRespsocket);
 
             Cb(DbRespsocket);
@@ -133,6 +135,137 @@ module.exports = {
         Cb(DbResp);
       }
     );
+  },
+
+  GroupinfoLocation: (userid, latitude, longitude) => {
+    db.collection("groupsinfo")
+      .find({
+        uid: userid
+      })
+      .toArray(function (err, checkExistanceInfo) {
+        if (err)
+          console.log("Error in find location query before insert ", err);
+        else {
+
+          console.log("latitude latitude:- ", latitude);
+          console.log("latitude longitude:- ", longitude);
+
+          var bytes_lat = CryptoJS.AES.decrypt(latitude, 'Location-Sharing');
+          var lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+
+          var bytes_long = CryptoJS.AES.decrypt(longitude, 'Location-Sharing');
+          var long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+
+          console.log("latitude length:- ", latitude.length);
+
+          console.log("checkExistanceInfo here", checkExistanceInfo);
+
+          if (latitude.length != 0) {
+            checkExistanceInfo.forEach((elm, i) => {
+
+              let decryptedData_lat = elm.latitude;
+              var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), elm.gid);
+              var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+
+              let decryptedData_long = elm.longitude;
+              var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), elm.gid);
+              var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+
+
+              console.log("new lat:- ", lat);
+              console.log("old lat:- ", get_lat);
+
+              console.log("new long:- ", long);
+              console.log("old long:- ", get_long);
+
+              if (lat != get_lat && long != get_long) {
+
+                console.log("update karo");
+
+                var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(lat), elm.gid);
+                var new_latitude = latitude_ciphertext.toString();
+
+                var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(long), elm.gid);
+                var new_longitude = longitude_ciphertext.toString();
+
+                var updata = {
+                  latitude: new_latitude,
+                  longitude: new_longitude,
+                }
+
+                console.log("update data:- ", updata);
+
+                db.collection('groupsinfo').findOneAndUpdate({ _id: ObjectId(elm._id.toString()) }, { $set: updata }, function (err, resp) {
+                  if (err) {
+                    console.log("groupsinfo is not updated");
+                  } else {
+                    console.log("groupsinfo update succesfully");
+                  }
+                });
+
+
+                var location_history_data = {
+                  uid: userid,
+                  gid: elm.gid,
+                  latitude: new_latitude,
+                  longitude: new_longitude,
+                  cd: new Date()
+                }
+
+                db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
+
+
+              } else {
+
+                console.log("not update");
+
+              }
+
+            });
+          } else {
+            console.log("latitude latitude:- ", latitude);
+          }
+
+
+
+
+
+          // let decryptedData_lat = checkExistanceInfo[0].latitude;
+          // var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), checkExistanceInfo[0].gid);
+          // var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+
+          // let decryptedData_long = checkExistanceInfo[0].longitude;
+          // var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), checkExistanceInfo[0].gid);
+          // var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+
+          // if (value.plain_lat != get_lat && value.plain_long != get_long) {
+
+          //   console.log("update karo");
+
+          //   var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(value.plain_lat), checkExistanceInfo[0].gid);
+          //   var new_latitude = latitude_ciphertext.toString();
+
+          //   var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(value.plain_long), checkExistanceInfo[0].gid);
+          //   var new_longitude = longitude_ciphertext.toString();
+
+          //   var updata = {
+          //     latitude: new_latitude,
+          //     longitude: new_longitude,
+          //   }
+
+          //   console.log("update data:- ", updata);
+
+          //   db.collection('groupsinfo').findOneAndUpdate({ uid: value.uid }, { $set: updata }, { multi: true }, function (err, resp) {
+          //     if (err) {
+          //       console.log("groupsinfo is not updated");
+          //     } else {
+          //       console.log("groupsinfo update succesfully");
+          //     }
+          //   });
+
+          // }
+        }
+      });
   }
 
 };

@@ -24,6 +24,10 @@ module.exports = {
       UserData["socket_id"] = Socket_id;
     }
 
+    let letitude = UserData.latitude;
+    let longitude = UserData.longitude;
+
+    common.GroupinfoLocation(userId.toString(), letitude, longitude);
 
     let Db_query = UserData;
     delete Db_query.uid;
@@ -87,6 +91,10 @@ module.exports = {
                     }
                   }
                 });
+
+
+
+
             }
 
             Cb({ user_status: true, user_info: user_info });
@@ -180,7 +188,7 @@ module.exports = {
               var group_ciphertext_key = CryptoJS.AES.encrypt(JSON.stringify(DbResp.insertedId), 'Location-Sharing');
               var group_key = group_ciphertext_key.toString();
 
-             
+
 
               var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_lat), group_key);
               var new_latitude = latitude_ciphertext.toString();
