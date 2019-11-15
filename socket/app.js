@@ -291,7 +291,7 @@ io.sockets.on("connection", socket => {
 
                 if (value.gid.toString() == get_gid) {
                   console.log("get group data____________________:- ", elm);
-                  myData.push({ lat: Number(get_lat), lng: Number(get_long) })
+                  myData.push({ lat: Number(get_lat), lng: Number(get_long), cd: elm.cd })
                 }
 
               });
