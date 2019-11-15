@@ -96,6 +96,16 @@ exports.addLocation = function (req, res) {
 
                                             db.collection('groupsinfo').insertOne(newgroupdata, function (err, newGroupData) { });
 
+                                            var location_history_data = {
+                                                uid: postdata.uid,
+                                                gid: group_key,
+                                                latitude: new_latitude,
+                                                longitude: new_longitude,
+                                                cd: new Date()
+                                            }
+
+                                            db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
+
                                             res.status(200).json({ status: true, message: 'Registration succesfully', userdata: alldata });
                                             return;
                                         }
@@ -195,6 +205,16 @@ exports.addLocation = function (req, res) {
                                             }
 
                                             db.collection('groupsinfo').insertOne(newgroupdata, function (err, newGroupData) { });
+
+                                            var location_history_data = {
+                                                uid: postdata.uid,
+                                                gid: group_key,
+                                                latitude: new_latitude,
+                                                longitude: new_longitude,
+                                                cd: new Date()
+                                            }
+
+                                            db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
 
                                             res.status(200).json({ status: true, message: 'Registration succesfully', userdata: alldata });
                                             return;
