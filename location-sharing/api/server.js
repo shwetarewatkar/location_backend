@@ -55,11 +55,14 @@ exports.addLocation = function (req, res) {
 
                                 db.collection('userdetails').find({ _id: ObjectId(result.insertedId) }).toArray(function (err, alldata) {
 
+                                    var randomno = randomString(10, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+
                                     var ingroupdata = {
                                         uid: postdata.uid,
                                         groupname: postdata.username + "_" + "Default Group",
                                         default: true,
                                         members: [postdata.uid],
+                                        shareid: randomno,
                                         date: new Date()
                                     }
 
@@ -165,11 +168,14 @@ exports.addLocation = function (req, res) {
 
                                 db.collection('userdetails').find({ _id: ObjectId(result.insertedId) }).toArray(function (err, alldata) {
 
+                                    var randomno = randomString(10, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+
                                     var ingroupdata = {
                                         uid: postdata.uid,
                                         groupname: postdata.username + "_" + "Default Group",
                                         default: true,
                                         members: [postdata.uid],
+                                        shareid: randomno,
                                         date: new Date()
                                     }
 

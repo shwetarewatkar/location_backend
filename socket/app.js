@@ -254,7 +254,7 @@ io.sockets.on("connection", socket => {
         let userid = value.uid.toString();
         let letitude = value.latitude;
         let longitude = value.longitude;
-      
+
         common.GroupinfoLocation(userid, letitude, longitude);
 
         break;
@@ -330,6 +330,30 @@ io.sockets.on("connection", socket => {
           });
 
         break;
+
+      case "getGroupData":
+
+        db.collection("groups")
+          .find({
+            shareid: value.shareid
+          })
+          .toArray(function (err, getShareIdData) {
+            if (err)
+              console.log("Error in find location query before insert ", err);
+            else {
+
+              console.log("getShareIdData:- ", getShareIdData);
+
+              socket.emit("res", {
+                event: "getGroupData",
+                data: getShareIdData
+              });
+
+            }
+          });
+
+        break;
+
       case "userDetails":
         // console.log("\ninside the case userDetails ");
         // , data

@@ -1,5 +1,13 @@
 const CryptoJS = require("crypto-js");
 
+// Generate random number for invite code
+function randomString(length, chars) {
+  var result = '';
+  for (var i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
+  return result;
+}
+
+
 module.exports = {
 
   CheckUser: (socket, UserData, Cb) => {
@@ -92,9 +100,6 @@ module.exports = {
                   }
                 });
 
-
-
-
             }
 
             Cb({ user_status: true, user_info: user_info });
@@ -167,12 +172,16 @@ module.exports = {
     if (uid == socket.uid) {
       common.CheckUserExsists(uid, Exsists => {
         if (Exsists == true) {
+
+          var randomno = randomString(10, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+
           db.collection("groups").insertOne(
             {
               uid: uid,
               groupname: GrpName,
               default: false,
               members: [uid],
+              shareid: randomno,
               date: new Date()
             },
             (err, DbResp) => {
