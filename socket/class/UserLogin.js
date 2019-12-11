@@ -14,11 +14,11 @@ module.exports = {
 
     console.log("userdata:- ", UserData);
 
-    var bytes_lat = CryptoJS.AES.decrypt(UserData.latitude, 'Location-Sharing');
-    var lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
-    var lenoflat = lat.length;
+    // var bytes_lat = CryptoJS.AES.decrypt(UserData.latitude, 'Location-Sharing');
+    // var lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+    // var lenoflat = lat.length;
 
-    console.log("checking:- ", lenoflat);
+    // console.log("checking:- ", lenoflat);
 
 
     let userId = UserData.uid;
@@ -32,113 +32,100 @@ module.exports = {
       UserData["socket_id"] = Socket_id;
     }
 
-    let letitude = UserData.latitude;
-    let longitude = UserData.longitude;
+    // let latitude = UserData.latitude;
+    // let longitude = UserData.longitude;
 
-    common.GroupinfoLocation(userId.toString(), letitude, longitude);
+    // common.GroupinfoLocation(userId.toString(), latitude, longitude);
 
     let Db_query = UserData;
     delete Db_query.uid;
     delete Db_query.email;
-    delete Db_query.plain_lat;
-    delete Db_query.plain_long;
     delete Db_query.calloption;
 
     Db_query = { $set: Db_query };
     let Conditon = { uid: userId };
 
-    if (lenoflat != 0) {
+    db.collection("userdetails").findOneAndUpdate(
+      Conditon,
+      Db_query,
+      (err, DbResp) => {
+        if (err) throw err;
+        let status = DbResp.lastErrorObject.n;
+        let user_info = DbResp.value;
+        if (status == 1) {
+          delete user_info._id;
+          delete user_info.uid;
+          logger(
+            "__________________user connected to socket____________",
+            Db_query,
+            "______________________________________________________"
+          );
 
-      db.collection("userdetails").findOneAndUpdate(
-        Conditon,
-        Db_query,
-        (err, DbResp) => {
-          if (err) throw err;
-          let status = DbResp.lastErrorObject.n;
-          let user_info = DbResp.value;
-          if (status == 1) {
-            delete user_info._id;
-            delete user_info.uid;
-            logger(
-              "__________________user connected to socket____________",
-              Db_query,
-              "______________________________________________________"
-            );
+          // if (UserData.status) {
 
-            if (UserData.status) {
+          //   db.collection("user_location")
+          //     .find({
+          //       uid: userId.toString(),
+          //       latitude: UserData.latitude,
+          //       longitude: UserData.longitude
+          //     })
+          //     .toArray(function (e, checkExistance) {
+          //       if (e)
+          //         console.log("Error in find location query before insert ", e);
+          //       else {
+          //         // console.log("\nCheckUserExsists ---------", checkExistance);
+          //         if (checkExistance.length == 0) {
 
-              db.collection("user_location")
-                .find({
-                  uid: userId.toString(),
-                  latitude: UserData.latitude,
-                  longitude: UserData.longitude
-                })
-                .toArray(function (e, checkExistance) {
-                  if (e)
-                    console.log("Error in find location query before insert ", e);
-                  else {
-                    // console.log("\nCheckUserExsists ---------", checkExistance);
-                    if (checkExistance.length == 0) {
+          //           db.collection("user_location").insertOne(
+          //             {
+          //               uid: userId.toString(),
+          //               latitude: UserData.latitude,
+          //               longitude: UserData.longitude,
+          //               cd: new Date()
+          //             },
+          //             function (er, inserted) {
+          //               if (er) console.log("error in insertation ", er);
+          //               else {
+          //                 if (inserted.ops[0]) {
+          //                   // console.log("data is inserted successfully");
+          //                 }
+          //               }
+          //             }
+          //           );
+          //         }
+          //       }
+          //     });
 
-                      db.collection("user_location").insertOne(
-                        {
-                          uid: userId.toString(),
-                          latitude: UserData.latitude,
-                          longitude: UserData.longitude,
-                          cd: new Date()
-                        },
-                        function (er, inserted) {
-                          if (er) console.log("error in insertation ", er);
-                          else {
-                            if (inserted.ops[0]) {
-                              // console.log("data is inserted successfully");
-                            }
-                          }
-                        }
-                      );
-                    }
-                  }
-                });
+          // }
 
-            }
+          Cb({ user_status: true, user_info: user_info });
+          // common.BroadcastMemberList(userId, UserList => {
 
-            Cb({ user_status: true, user_info: user_info });
-            common.BroadcastMemberList(userId, UserList => {
+          //   console.log("userlist:- ", UserList);
 
-              console.log("userlist:- ", UserList);
+          //   if (UserList != undefined && UserList != null) {
 
-              if (UserList != undefined && UserList != null) {
-
-                for (let i = 0; i < UserList.length; i++) {
-                  console.log("Location update sent", UserList[i]);
-                  io.to(UserList[i]).emit("res", {
-                    event: "UserLocationUpdate",
-                    data: {
-                      uid: userId,
-                      latitude: UserData.latitude,
-                      longitude: UserData.longitude
-                    }
-                  });
-                }
+          //     for (let i = 0; i < UserList.length; i++) {
+          //       console.log("Location update sent", UserList[i]);
+          //       io.to(UserList[i]).emit("res", {
+          //         event: "UserLocationUpdate",
+          //         data: {
+          //           uid: userId,
+          //           latitude: UserData.latitude,
+          //           longitude: UserData.longitude
+          //         }
+          //       });
+          //     }
 
 
-              }
-
-
-
-            });
-
-
-
+          //   }
+          // });
           } else {
             logger("__________________userid not matched____________");
             Cb({ user_status: false, user_info: user_info });
           }
         }
       );
-
-
-    }
 
   },
 
@@ -166,9 +153,40 @@ module.exports = {
     }
   },
 
+  groupKeys:(socket, data, Cb) => {
+    console.log("groupKey data",data);
+
+    console.log("groupKeys Socket.uid",socket.uid);
+    if(socket.uid){
+      let uid = data.uid;
+      var bytes_uid = CryptoJS.AES.decrypt(uid.toString(), 'Location-Sharing');
+      var userid = JSON.parse(bytes_uid.toString(CryptoJS.enc.Utf8));
+      console.log("userid",userid);
+
+      // db.collection("groupkey_info").find().toArray( function(err, docs) {
+      //   if (err) {
+      //     logger("all_groupkeyinfo----",docs);
+      //   }});
+
+      db.collection("groupkey_info")
+      .find({ uid: userid}).toArray(function(err,DbResp){
+        if(err){
+          throw err;
+        }
+        logger("groupKey-----------",DbResp);
+        Cb({groups: DbResp, error: null});
+      });
+    }
+    else{
+      logger("______________________user not logged in__________________");
+      Cb({ error: "user not logged in" });
+    }
+  },
+
   AddGroup: (socket, groupInfo, Cb) => {
     let uid = groupInfo.uid;
     let GrpName = groupInfo.GroupName;
+    
     if (uid == socket.uid) {
       common.CheckUserExsists(uid, Exsists => {
         if (Exsists == true) {
@@ -187,32 +205,45 @@ module.exports = {
             (err, DbResp) => {
               if (err) throw err;
 
+              // var bytes_lat = CryptoJS.AES.decrypt(groupInfo.plain_lat.toString(), 'Location-Sharing');
+              // var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
 
-              var bytes_lat = CryptoJS.AES.decrypt(groupInfo.plain_lat.toString(), 'Location-Sharing');
-              var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+              // var bytes_long = CryptoJS.AES.decrypt(groupInfo.plain_long.toString(), 'Location-Sharing');
+              // var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
 
-              var bytes_long = CryptoJS.AES.decrypt(groupInfo.plain_long.toString(), 'Location-Sharing');
-              var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
-
-              var group_ciphertext_key = CryptoJS.AES.encrypt(JSON.stringify(DbResp.insertedId), 'Location-Sharing');
-              var group_key = group_ciphertext_key.toString();
-
+              // var group_ciphertext_key = CryptoJS.AES.encrypt(JSON.stringify(DbResp.insertedId), 'Location-Sharing');
+              // var group_key = group_ciphertext_key.toString();
 
 
-              var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_lat), group_key);
-              var new_latitude = latitude_ciphertext.toString();
 
-              var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_long), group_key);
-              var new_longitude = longitude_ciphertext.toString();
+              // var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_lat), group_key);
+              // var new_latitude = latitude_ciphertext.toString();
 
-              var newgroupdata = {
+              // var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_long), group_key);
+              // var new_longitude = longitude_ciphertext.toString();
+
+              var gid = DbResp.insertedId.toString();
+
+              var latest_location_data = {
                 uid: uid,
-                gid: group_key,
-                latitude: new_latitude,
-                longitude: new_longitude,
+                gid: gid,
+                latitude: groupInfo.latitude.toString(),
+                longitude: groupInfo.longitude.toString(),
+                latest_kv: 0
               }
 
-              db.collection('groupsinfo').insertOne(newgroupdata, function (err, newGroupData) { });
+              db.collection('latest_location').insertOne(latest_location_data, function (err, latest_location_resp) { });
+              var randomno2 = randomString(10, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+              var groupKey = CryptoJS.AES.encrypt(JSON.stringify(randomno2),'Location-Sharing');
+              var encrypted_groupKey = groupKey.toString();
+
+              var groupKeyInfo = {
+                uid: uid, // uid of last added/removed  member
+                gid: gid,
+                gkey: encrypted_groupKey,
+                kv: 0
+              }
+              db.collection('groupkey_info').insertOne(groupKeyInfo, function(err,groupKeyInfo_response){});
 
               UserLogin.GetUserGroups(socket, GroupsData => {
                 if (GroupsData.error == null) {
@@ -344,13 +375,17 @@ module.exports = {
         .toArray((err, DbResp) => {
           if (err) throw err;
           console.log("%%%%", DbResp);
+
           let members = DbResp[0].members.map(Member_id => {
             let temp = { uid: Member_id };
             return temp;
           });
-
+          logger(
+            "______________________Members__________________",
+            members
+          );
           if (members.length > 0) {
-            common.GetUserById(members, MemberList => {
+            common.GetUserById(members,GrpId, MemberList => {
               logger(
                 "______________________Member List__________________",
                 MemberList

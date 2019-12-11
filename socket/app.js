@@ -16,7 +16,8 @@ const DBname = process.env.DBname;
 const DBuser = process.env.DBuser;
 const DBpass = process.env.DBpass;
 // const MongoUrl = `mongodb://${DBuser}:${DBpass}@${DBhost}:${DBport}/${DBname}`;
-const MongoUrl = `mongodb+srv://${DBuser}:${DBpass}@cluster0-nmkja.mongodb.net/test?retryWrites=true&w=majority`
+const MongoUrl = "mongodb+srv://user:pass123456@cluster0-ng5er.mongodb.net/test?retryWrites=true&w=majority"
+// const MongoUrl = `mongodb+srv://${DBuser}:${DBpass}@cluster0-nmkja.mongodb.net/test?retryWrites=true&w=majority`
 const AtlasClient = new MongoClient(MongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 /* ----------------- .env Ends ---------------------*/
 
@@ -42,17 +43,17 @@ common = module.exports = require("./common/mongoOp");
 
 /* ---------------- SSL Certificate Files  -------------------*/
 let options = {
-  // key: fs.readFileSync("./certificate/ca.pem", "utf8"),
-  key: fs.readFileSync("/etc/letsencrypt/live/ls.shwetarewatkar.com/privkey.pem", "utf8"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/ls.shwetarewatkar.com/fullchain.pem", "utf8")
-  // cert: fs.readFileSync("./certificate/ca.crt", "utf8")
+  key: fs.readFileSync("./certificate/ca.pem", "utf8"),
+  // key: fs.readFileSync("/etc/letsencrypt/live/ls.shwetarewatkar.com/privkey.pem", "utf8"),
+  // cert: fs.readFileSync("/etc/letsencrypt/live/ls.shwetarewatkar.com/fullchain.pem", "utf8")
+  cert: fs.readFileSync("./certificate/ca.crt", "utf8")
 };
 /* ---------------- SSL Certificate Files Ends  -------------------*/
 
 /* ---------------- Creating Https Server -------------------*/
-let app = https.createServer(options, (req, res) => {
+// let app = https.createServer(options, (req, res) => {
 
-// let app = http.createServer((req, res) => {
+let app = http.createServer((req, res) => {
 
   console.log("started");
 
@@ -76,7 +77,7 @@ io.sockets.on("connection", socket => {
     switch (event) {
       case "Auth":
         UserLogin.CheckUser(socket, value, status => {
-          logger(status.user_status);
+          logger("Auth_status",status.user_status, status.user_info);
 
           socket.emit("res", {
             event: "Auth_Status",
@@ -87,7 +88,16 @@ io.sockets.on("connection", socket => {
           });
         });
         break;
-
+      case "getGroupKeys":
+          UserLogin.groupKeys(socket, value, groupObject => {
+            if(groupObject.error == null){
+              logger(
+                "+++++++++++++++++++++ Response Sent getGroupKeysResponse +++++++++++++++++++++"
+              );
+              socket.emit("res", { event: "getGroupKeysResponse", data: groupObject.groups});
+            }
+          });
+          break;
       case "newLocationReq":
 
         console.log("new location data:- ", value);
@@ -111,7 +121,10 @@ io.sockets.on("connection", socket => {
         break;
       case "AddGroup":
         logger("======================= AddGroup =========================");
-        UserLogin.AddGroup(socket, value, GroupsData => { });
+        UserLogin.AddGroup(socket, value, GroupsData => { 
+          console.log("Addgroup data",value);
+          logger("AddGroup Response", GroupsData);
+        });
         break;
       case "DeleteGroup":
         logger("======================= DeleteGroup =========================");
@@ -202,60 +215,62 @@ io.sockets.on("connection", socket => {
         break;
       case "UpdateLocation":
         console.log("inside the UpdateLocation case ", data);
+        logger("\n\n********* UpdateLocation invoked with >>> value: ",value,"\n\n")
+        // common.GroupinfoLocation(value);
 
-        db.collection("user_location")
-          .find({
-            uid: value.uid.toString(),
-            latitude: value.latitude,
-            longitude: value.longitude
-          })
-          .toArray(function (e, checkExistance) {
-            if (e)
-              console.log("Error in find location query before insert ", e);
-            else {
-              console.log("\nUpdateLocation ssss CheckUserExsists ---------", checkExistance);
-              // ,checkExistance
+        // db.collection("user_location")
+        //   .find({
+        //     uid: value.uid.toString(),
+        //     latitude: value.latitude,
+        //     longitude: value.longitude
+        //   })
+        //   .toArray(function (e, checkExistance) {
+        //     if (e)
+        //       console.log("Error in find location query before insert ", e);
+        //     else {
+        //       console.log("\nUpdateLocation ssss CheckUserExsists ---------", checkExistance);
+        //       // ,checkExistance
 
-              var bytes_lat = CryptoJS.AES.decrypt(value.latitude, 'Location-Sharing');
-              var lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
-              var lenoflat = lat.length;
+        //       var bytes_lat = CryptoJS.AES.decrypt(value.latitude, 'Location-Sharing');
+        //       var lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+        //       var lenoflat = lat.length;
 
-              console.log("checking from fr:- ", lenoflat);
+        //       console.log("checking from fr:- ", lenoflat);
 
-              if (checkExistance.length == 0) {
+        //       if (checkExistance.length == 0) {
 
-                console.log("calling :- ", value.latitude)
+        //         console.log("calling :- ", value.latitude)
 
-                if (lenoflat != 0) {
-                  db.collection("user_location").insertOne(
-                    {
-                      uid: value.uid.toString(),
-                      latitude: value.latitude,
-                      longitude: value.longitude,
-                      cd: new Date()
-                    },
-                    function (er, inserted) {
-                      if (er)
-                        console.log("UpdateLocation error in insertation ", er);
-                      else {
-                        if (inserted.ops[0]) {
-                          // console.log(
-                          // "UpdateLocation data is inserted successfully"
-                          // );
-                        }
-                      }
-                    }
-                  );
-                }
-              }
-            }
-          });
+        //         if (lenoflat != 0) {
+        //           db.collection("user_location").insertOne(
+        //             {
+        //               uid: value.uid.toString(),
+        //               latitude: value.latitude,
+        //               longitude: value.longitude,
+        //               cd: new Date()
+        //             },
+        //             function (er, inserted) {
+        //               if (er)
+        //                 console.log("UpdateLocation error in insertation ", er);
+        //               else {
+        //                 if (inserted.ops[0]) {
+        //                   // console.log(
+        //                   // "UpdateLocation data is inserted successfully"
+        //                   // );
+        //                 }
+        //               }
+        //             }
+        //           );
+        //         }
+        //       }
+        //     }
+        //   });
 
-        let userid = value.uid.toString();
-        let letitude = value.latitude;
-        let longitude = value.longitude;
+        // let userid = value.uid.toString();
+        // let letitude = value.latitude;
+        // let longitude = value.longitude;
 
-        common.GroupinfoLocation(userid, letitude, longitude);
+        // common.GroupinfoLocation(userid, letitude, longitude);
 
         break;
 

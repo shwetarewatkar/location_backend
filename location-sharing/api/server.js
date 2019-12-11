@@ -37,10 +37,8 @@ exports.addLocation = function (req, res) {
                             uid: postdata.uid,
                             email: postdata.email,
                             username: postdata.username,
-                            latitude: postdata.latitude,
-                            longitude: postdata.longitude,
                             invitecode: randomString(6, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'),
-                            flage: postdata.flage,
+                            flag: postdata.flag,
                             socket_id: "",
                             profile: postdata.profile,
                             date: new Date()
@@ -71,45 +69,49 @@ exports.addLocation = function (req, res) {
                                             res.status(200).json({ status: false, message: 'Error for Created Group' });
                                             return;
                                         } else {
-
-                                            var bytes_lat = CryptoJS.AES.decrypt(postdata.latitude, 'Location-Sharing');
-                                            var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
-
-                                            var bytes_long = CryptoJS.AES.decrypt(postdata.longitude, 'Location-Sharing');
-                                            var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
-
-                                            var group_ciphertext_key = CryptoJS.AES.encrypt(JSON.stringify(groupData.insertedId), 'Location-Sharing');
-                                            var group_key = group_ciphertext_key.toString();
-
-                                            var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_lat), group_key);
-                                            var new_latitude = latitude_ciphertext.toString();
-
-                                            var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_long), group_key);
-                                            var new_longitude = longitude_ciphertext.toString();
-
-                                            // console.log("latitude:- ", postdata.plain_lat);
-                                            // console.log("longitude:- ", postdata.plain_long);
-
-                                            var newgroupdata = {
+                                            
+                                            var gid = groupData.insertedId.toString();
+                                            var latest_location_data = {
                                                 uid: postdata.uid,
-                                                gid: group_key,
-                                                latitude: new_latitude,
-                                                longitude: new_longitude,
+                                                gid: gid, //gid => grp _id
+                                                latitude: "",
+                                                longitude: "",
+                                                latest_kv: 0
                                             }
 
-                                            db.collection('groupsinfo').insertOne(newgroupdata, function (err, newGroupData) { });
+                                            db.collection('latest_location').insertOne(latest_location_data, function (err, latest_location_response) { });
+                                            var randomno2 = randomString(10, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+                                            var groupKey = CryptoJS.AES.encrypt(JSON.stringify(randomno2),'Location-Sharing');
+                                            var encrypted_groupKey = groupKey.toString();
+
+                                            var groupKeyInfo = {
+                                                uid: postdata.uid, // uid of last added/removed  member
+                                                gid: gid,
+                                                gkey: encrypted_groupKey,
+                                                kv: 0
+                                            }
+
+                                            db.collection('groupkey_info').insertOne(groupKeyInfo, function(err,groupKeyInfo_response){});
+
+                                            var memberStartKv ={
+                                                uid: postdata.uid,
+                                                gid: gid,
+                                                startKv: 0
+                                            }
+
+                                            db.collection('member_start_kv').insertOne(memberStartKv, function(err,groupKeyInfo_response){});
 
                                             var location_history_data = {
                                                 uid: postdata.uid,
-                                                gid: group_key,
-                                                latitude: new_latitude,
-                                                longitude: new_longitude,
+                                                gid: gid,
+                                                latitude: "",
+                                                longitude: "",
                                                 cd: new Date()
                                             }
 
                                             db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
 
-                                            res.status(200).json({ status: true, message: 'Registration succesfully', userdata: alldata });
+                                            res.status(200).json({ status: true, message: 'Registration succesfuly', userdata: alldata });
                                             return;
                                         }
 
@@ -121,7 +123,7 @@ exports.addLocation = function (req, res) {
                         });
 
                     } else {
-                        res.status(200).json({ status: false, message: 'User allready exist!' });
+                        res.status(200).json({ status: false, message: 'User already exist!' });
                         return;
                     }
 
@@ -141,10 +143,8 @@ exports.addLocation = function (req, res) {
                             uid: postdata.uid,
                             email: postdata.email,
                             username: postdata.username,
-                            latitude: postdata.latitude,
-                            longitude: postdata.longitude,
                             invitecode: randomString(6, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'),
-                            flage: postdata.flage,
+                            flag: postdata.flag,
                             socket_id: "",
                             profile: postdata.profile,
                             date: new Date()
@@ -156,15 +156,6 @@ exports.addLocation = function (req, res) {
                                 res.status(200).json({ status: false, message: 'Error for Registration' });
                                 return;
                             } else {
-
-                                var locationdata = {
-                                    uid: postdata.uid,
-                                    latitude: postdata.latitude,
-                                    longitude: postdata.longitude,
-                                    cd: new Date()
-                                }
-
-                                db.collection('user_location').insertOne(locationdata, function (err, result) { });
 
                                 db.collection('userdetails').find({ _id: ObjectId(result.insertedId) }).toArray(function (err, alldata) {
 
@@ -184,45 +175,46 @@ exports.addLocation = function (req, res) {
                                             res.status(200).json({ status: false, message: 'Error for Created Group' });
                                             return;
                                         } else {
-
-                                            var bytes_lat = CryptoJS.AES.decrypt(postdata.latitude, 'Location-Sharing');
-                                            var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
-
-                                            var bytes_long = CryptoJS.AES.decrypt(postdata.longitude, 'Location-Sharing');
-                                            var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
-
-                                            var group_ciphertext_key = CryptoJS.AES.encrypt(JSON.stringify(groupData.insertedId), 'Location-Sharing');
-                                            var group_key = group_ciphertext_key.toString();
-
-                                            var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_lat), group_key);
-                                            var new_latitude = latitude_ciphertext.toString();
-
-                                            var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_long), group_key);
-                                            var new_longitude = longitude_ciphertext.toString();
-
-                                            // console.log("latitude:- ", postdata.plain_lat);
-                                            // console.log("longitude:- ", postdata.plain_long);
-
-                                            var newgroupdata = {
+                                            var gid = groupData.insertedId.toString();
+                                            var latest_location_data = {
                                                 uid: postdata.uid,
-                                                gid: group_key,
-                                                latitude: new_latitude,
-                                                longitude: new_longitude,
+                                                gid: gid, //gid => grp _id
+                                                latitude: "",
+                                                longitude: "",
+                                                latest_kv: 0
+                                            }
+                                            db.collection('latest_location').insertOne(latest_location_data, function (err, latest_location_response) { });
+                                            var randomno2 = randomString(10, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+                                            var groupKey = CryptoJS.AES.encrypt(JSON.stringify(randomno2),'Location-Sharing');
+                                            var encrypted_groupKey = groupKey.toString();
+                                            
+                                            var groupKeyInfo = {
+                                                uid: postdata.uid, // uid of last added/removed  member
+                                                gid: gid,
+                                                gkey: encrypted_groupKey,
+                                                kv: 0
                                             }
 
-                                            db.collection('groupsinfo').insertOne(newgroupdata, function (err, newGroupData) { });
+                                            db.collection('groupkey_info').insertOne(groupKeyInfo, function(err,groupKeyInfo_response){});
 
+                                            var memberStartKv ={
+                                                uid: postdata.uid,
+                                                gid: gid,
+                                                startKv: 0
+                                            }
+
+                                            db.collection('member_start_kv').insertOne(memberStartKv, function(err,groupKeyInfo_response){});
                                             var location_history_data = {
                                                 uid: postdata.uid,
-                                                gid: group_key,
-                                                latitude: new_latitude,
-                                                longitude: new_longitude,
+                                                gid: gid,
+                                                latitude: "",
+                                                longitude: "",
                                                 cd: new Date()
                                             }
 
                                             db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
 
-                                            res.status(200).json({ status: true, message: 'Registration succesfully', userdata: alldata });
+                                            res.status(200).json({ status: true, message: 'Registration succesfull', userdata: alldata });
                                             return;
                                         }
 
@@ -235,16 +227,16 @@ exports.addLocation = function (req, res) {
 
                     } else {
 
-                        var locationdata = {
-                            uid: postdata.uid,
-                            latitude: postdata.latitude,
-                            longitude: postdata.longitude,
-                            cd: new Date()
-                        }
+                        // var locationdata = {
+                        //     uid: postdata.uid,
+                        //     latitude: postdata.latitude,
+                        //     longitude: postdata.longitude,
+                        //     cd: new Date()
+                        // }
 
-                        db.collection('user_location').insertOne(locationdata, function (err, result) { });
+                        // db.collection('user_location').insertOne(locationdata, function (err, result) { });
 
-                        res.status(200).json({ status: false, message: 'Login Successfully', userdata: getuser });
+                        res.status(200).json({ status: false, message: 'Login Successfull', userdata: getuser });
                         return;
                     }
 
@@ -254,7 +246,7 @@ exports.addLocation = function (req, res) {
 
             default:
 
-                res.status(200).json({ status: false, message: 'Something want to wrong' });
+                res.status(200).json({ status: false, message: 'Something went wrong' });
                 return;
 
         }

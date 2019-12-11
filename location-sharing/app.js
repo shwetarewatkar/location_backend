@@ -30,8 +30,8 @@ app.use(function (req, res, next) {
 });
 
 const options = {
-    key: fs.readFileSync("/etc/letsencrypt/live/ls.shwetarewatkar.com/privkey.pem"),
-    cert: fs.readFileSync("/etc/letsencrypt/live/ls.shwetarewatkar.com/fullchain.pem")
+    // key: fs.readFileSync("/etc/letsencrypt/live/ls.shwetarewatkar.com/privkey.pem"),
+    // cert: fs.readFileSync("/etc/letsencrypt/live/ls.shwetarewatkar.com/fullchain.pem")
 };
 
 app.use('/npm', express.static(__dirname + '/node_modules'));
@@ -58,5 +58,5 @@ app.use('/api', apiRoutes);
 // ADD API
 app.post('/location/add', location.addLocation);
 
-https.createServer(options, app).listen(3000);
-// app.listen(3000);
+// https.createServer(options, app).listen(3000);
+app.listen(3000);

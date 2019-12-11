@@ -10,30 +10,66 @@ module.exports = {
       });
   },
 
-  GetUserById: (MemberId, Cb) => {
+  GetUserById: (Members, groupId, Cb) => {
     // console.log("$$$$$$$$$$$$$$$$", MemberId);
 
-    db.collection("userdetails")
-      .find({ $or: MemberId })
-      .toArray((err, DbResp) => {
-        if (err) throw err;
-        // console.log(DbResp);
-        let FinalMemeberList = DbResp.map(Member_Info => {
-          delete Member_Info._id;
-          delete Member_Info.date;
-          delete Member_Info.invitecode;
-          return Member_Info;
-        });
-        // console.log(FinalMemeberList);
-        Cb(FinalMemeberList);
-      });
+    // db.collection("userdetails")
+    //   .find({ $or: MemberId })
+    //   .toArray((err, DbResp) => {
+    //     if (err) throw err;
+    //     // console.log(DbResp);
+    //     let FinalMemeberList = DbResp.map(Member_Info => {
+    //       delete Member_Info._id;
+    //       delete Member_Info.date;
+    //       delete Member_Info.invitecode;
+    //       return Member_Info;
+    //     });
+    //     // console.log(FinalMemeberList);
+    //     Cb(FinalMemeberList);
+    //   });
+    db.collection("latest_location").aggregate([
+      // Join with user_info table
+        {
+          $lookup:{
+              from: "userdetails",       // other table name
+              localField: "uid",   // name of users table field
+              foreignField: "uid", // name of userinfo table field
+              as: "userdetails"         // alias for userinfo table
+          }
+        },
+        {   $unwind:"$userdetails" },     // $unwind used for getting data in object or for one record only
+
+        {
+          $match:{
+              $and:[{$or: Members},{gid:groupId.toString()}]
+          }
+        },
+
+        // define which fields are you want to fetch
+        {   
+          $project:{
+              uid : 1,
+              userName : '$userdetails.userName',
+              email: '$userdetails.email',
+              profile: '$userdetails.profile',
+              gid: 1,
+              latitude: 1,
+              longitude: 1,
+              latest_kv: 1
+          } 
+        }
+
+    ]).toArray((err, DbResp) => {
+      logger("--------->> DBresp <<-----",DbResp);
+      Cb(DbResp);  
+    });
   },
 
   CheckUserExsists: (UserId, Cb) => {
     db.collection("userdetails")
       .find({ uid: UserId })
       .toArray((err, DbResp) => {
-        // console.log(DbResp.length);
+        console.log("CheckUserExsists DBResp",DbResp);
 
         if (DbResp.length == 1) {
           Cb(true);
@@ -138,6 +174,7 @@ module.exports = {
   },
 
   GroupinfoLocation: (userid, latitude, longitude) => {
+    logger("-----------GroupinfoLocation data", data);
     db.collection("groupsinfo")
       .find({
         uid: userid
