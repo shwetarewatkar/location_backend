@@ -101,9 +101,7 @@ io.sockets.on("connection", socket => {
       case "newLocationReq":
 
         console.log("new location data:- ", value);
-        db.collection("userdetails").findOneAndUpdate({ uid: value.uid }, (err, DbResp) => {
-
-        });
+        db.collection("userdetails").findOneAndUpdate({ uid: value.uid }, (err, DbResp) => {});
 
         break;
       case "GetGroupsList":
@@ -169,6 +167,40 @@ io.sockets.on("connection", socket => {
           }
         });
         break;
+        case "GetMemeberListDefault":
+            logger(
+              "======================= GetMemeberList ========================="
+            );
+            // console.log("@@@@@@@@@@ ", value);
+            UserLogin.GetGroupMembers(socket, value, GroupsMembers => {
+              if (GroupsMembers) {
+                logger(
+                  "+++++++++++++++++++++ Response Sent GetMemeberList +++++++++++++++++++++"
+                );
+                socket.emit("res", {
+                  event: "GroupMemberListDefault",
+                  data: GroupsMembers
+                });
+              }
+            });
+            break;
+            case "GetMemeberListMount":
+                logger(
+                  "======================= GetMemeberList ========================="
+                );
+                // console.log("@@@@@@@@@@ ", value);
+                UserLogin.GetGroupMembers(socket, value, GroupsMembers => {
+                  if (GroupsMembers) {
+                    logger(
+                      "+++++++++++++++++++++ Response Sent GetMemeberList +++++++++++++++++++++"
+                    );
+                    socket.emit("res", {
+                      event: "GroupMemberListMount",
+                      data: GroupsMembers
+                    });
+                  }
+                });
+                break;
       case "RemoveMember":
         logger(
           "======================= RemoveMember ========================="
@@ -213,10 +245,63 @@ io.sockets.on("connection", socket => {
           }
         });
         break;
+
       case "UpdateLocation":
+
         console.log("inside the UpdateLocation case ", data);
-        logger("\n\n********* UpdateLocation invoked with >>> value: ",value,"\n\n")
+        logger("\n\n********* UpdateLocation invoked with >>> value: ",value,"\n\n");
+        userId = value[0].uid;
         // common.GroupinfoLocation(value);
+
+        for(var i=0; i<value.length;i++){
+
+          UserLocationData = value[i];
+          UserLocationData['latest_kv'] = UserLocationData.kv;
+          delete UserLocationData.kv;
+
+          console.log(i, " UserLocationData ", UserLocationData);
+          let Condition = { $and: [ {uid: UserLocationData.uid}, {gid: UserLocationData.gid} ]}
+          let Db_query = { $set: UserLocationData };
+          
+          // update latest location for all user groups
+          db.collection("latest_location")
+          .findOneAndUpdate(
+            Condition,
+            Db_query,
+            (err, DbResp) => {
+            if (err) throw err;
+            let status = DbResp.lastErrorObject.n;
+            if(status==1){
+              console.log("Location Updated as status=1");
+            }
+            else{
+              console.log("Location not Updated as status!=1");
+            }
+
+          });
+
+          // insert new location for all user groups
+          db.collection('userhistory').insertOne(UserLocationData, function (err, inserted_id) { });
+        }
+
+        common.BroadcastMemberList(userId, UserList => {
+
+          console.log("userlist:- ", UserList);
+
+          if (UserList != undefined && UserList != null) {
+
+            for (let i = 0; i < UserList.length; i++) {
+              console.log("Location update sent", UserList[i]);
+              io.to(UserList[i]).emit("res", {
+                event: "UserLocationUpdate",
+                data: {
+                  uid: userId,
+                }
+              });
+            }
+          }
+        });
+        
 
         // db.collection("user_location")
         //   .find({

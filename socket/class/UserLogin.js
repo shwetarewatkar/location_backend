@@ -99,33 +99,15 @@ module.exports = {
           // }
 
           Cb({ user_status: true, user_info: user_info });
-          // common.BroadcastMemberList(userId, UserList => {
 
-          //   console.log("userlist:- ", UserList);
-
-          //   if (UserList != undefined && UserList != null) {
-
-          //     for (let i = 0; i < UserList.length; i++) {
-          //       console.log("Location update sent", UserList[i]);
-          //       io.to(UserList[i]).emit("res", {
-          //         event: "UserLocationUpdate",
-          //         data: {
-          //           uid: userId,
-          //           latitude: UserData.latitude,
-          //           longitude: UserData.longitude
-          //         }
-          //       });
-          //     }
-
-
-          //   }
-          // });
           } else {
             logger("__________________userid not matched____________");
             Cb({ user_status: false, user_info: user_info });
           }
         }
       );
+
+      
 
   },
 
@@ -227,8 +209,8 @@ module.exports = {
               var latest_location_data = {
                 uid: uid,
                 gid: gid,
-                latitude: groupInfo.latitude.toString(),
-                longitude: groupInfo.longitude.toString(),
+                latitude: "",
+                longitude: "",
                 latest_kv: 0
               }
 
@@ -243,6 +225,7 @@ module.exports = {
                 gkey: encrypted_groupKey,
                 kv: 0
               }
+
               db.collection('groupkey_info').insertOne(groupKeyInfo, function(err,groupKeyInfo_response){});
 
               UserLogin.GetUserGroups(socket, GroupsData => {

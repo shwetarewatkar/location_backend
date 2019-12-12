@@ -11,22 +11,7 @@ module.exports = {
   },
 
   GetUserById: (Members, groupId, Cb) => {
-    // console.log("$$$$$$$$$$$$$$$$", MemberId);
-
-    // db.collection("userdetails")
-    //   .find({ $or: MemberId })
-    //   .toArray((err, DbResp) => {
-    //     if (err) throw err;
-    //     // console.log(DbResp);
-    //     let FinalMemeberList = DbResp.map(Member_Info => {
-    //       delete Member_Info._id;
-    //       delete Member_Info.date;
-    //       delete Member_Info.invitecode;
-    //       return Member_Info;
-    //     });
-    //     // console.log(FinalMemeberList);
-    //     Cb(FinalMemeberList);
-    //   });
+    
     db.collection("latest_location").aggregate([
       // Join with user_info table
         {
@@ -49,7 +34,7 @@ module.exports = {
         {   
           $project:{
               uid : 1,
-              userName : '$userdetails.userName',
+              username : '$userdetails.username',
               email: '$userdetails.email',
               profile: '$userdetails.profile',
               gid: 1,
@@ -128,6 +113,7 @@ module.exports = {
           { $or: DbResp, socket_id: { $ne: "" } },
           (err, DbRespsocket) => {
 
+            db.collection("latest_location").find({})
             console.log("db response:- ", DbRespsocket);
 
             Cb(DbRespsocket);

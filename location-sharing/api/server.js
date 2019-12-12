@@ -101,15 +101,15 @@ exports.addLocation = function (req, res) {
 
                                             db.collection('member_start_kv').insertOne(memberStartKv, function(err,groupKeyInfo_response){});
 
-                                            var location_history_data = {
-                                                uid: postdata.uid,
-                                                gid: gid,
-                                                latitude: "",
-                                                longitude: "",
-                                                cd: new Date()
-                                            }
+                                            // var location_history_data = {
+                                            //     uid: postdata.uid,
+                                            //     gid: gid,
+                                            //     latitude: "",
+                                            //     longitude: "",
+                                            //     cd: new Date()
+                                            // }
 
-                                            db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
+                                            // db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
 
                                             res.status(200).json({ status: true, message: 'Registration succesfuly', userdata: alldata });
                                             return;
@@ -204,15 +204,15 @@ exports.addLocation = function (req, res) {
                                             }
 
                                             db.collection('member_start_kv').insertOne(memberStartKv, function(err,groupKeyInfo_response){});
-                                            var location_history_data = {
-                                                uid: postdata.uid,
-                                                gid: gid,
-                                                latitude: "",
-                                                longitude: "",
-                                                cd: new Date()
-                                            }
+                                            // var location_history_data = {
+                                            //     uid: postdata.uid,
+                                            //     gid: gid,
+                                            //     latitude: "",
+                                            //     longitude: "",
+                                            //     cd: new Date()
+                                            // }
 
-                                            db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
+                                            // db.collection('userhistory').insertOne(location_history_data, function (err, inserted_id) { });
 
                                             res.status(200).json({ status: true, message: 'Registration succesfull', userdata: alldata });
                                             return;
