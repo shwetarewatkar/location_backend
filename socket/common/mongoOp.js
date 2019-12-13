@@ -1,6 +1,17 @@
 const CryptoJS = require("crypto-js");
 
 module.exports = {
+  getUsersStartkv: (uid, gid, Cb) =>{
+    logger("[getUserStartKV] uid ,gid",uid, gid);
+    db.collection("member_start_kv")
+    .find({ uid: uid.toString(), gid: gid.toString() })
+      .toArray((err, DbResp) => {
+        if (err) throw err;
+        logger("[GETUSER startKv ]", DbResp[0]);
+        Cb(DbResp[0].startKv);
+      });
+  },
+
   GetUserByInvite: (invite, Cb) => {
     db.collection("userdetails")
       .find({ invitecode: invite })
@@ -36,7 +47,8 @@ module.exports = {
           $match:{
             $and:
               [{$or: Members},
-              {gid: groupId.toString()}]
+              {gid: groupId.toString()}],
+              // {$gte: {latest_kv: $members_startkv.kv} }
           }
         },
 

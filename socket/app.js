@@ -17,7 +17,7 @@ const DBname = process.env.DBname;
 const DBuser = process.env.DBuser;
 const DBpass = process.env.DBpass;
 // const MongoUrl = `mongodb://${DBuser}:${DBpass}@${DBhost}:${DBport}/${DBname}`;
-const MongoUrl = "mongodb+srv://user1:pass123456@cluster0-rzmux.mongodb.net/location?retryWrites=true&w=majority"
+const MongoUrl = "mongodb+srv://user1:pass123456@cluster0-rzmux.mongodb.net/new-server?retryWrites=true&w=majority"
 // const MongoUrl = `mongodb+srv://${DBuser}:${DBpass}@cluster0-nmkja.mongodb.net/test?retryWrites=true&w=majority`
 const AtlasClient = new MongoClient(MongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 /* ----------------- .env Ends ---------------------*/
@@ -425,10 +425,10 @@ io.sockets.on("connection", socket => {
                 // var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), elm.gid);
                 // var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
 
-                console.log("get gid:- ", get_gid);
+                console.log("get gid:- ", elm.gid);
 
                 // add condition for member start_kv
-                if (value.gid.toString() == get_gid) {
+                if (value.gid.toString() == elm.gid) {
                   console.log("get group data____________________:- ", elm);
                   myData.push({ gid: elm.gid, latest_kv: elm.latest_kv, lat: elm.latitude, lng: elm.longitude, cd: elm.cd })
                 }

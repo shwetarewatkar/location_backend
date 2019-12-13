@@ -7,7 +7,6 @@ function randomString(length, chars) {
   return result;
 }
 
-
 module.exports = {
 
   CheckUser: (socket, UserData, Cb) => {
@@ -154,21 +153,57 @@ module.exports = {
           var g_ids = [];
           
           for(var i=0;i<groups.length;i++){
-            var gid = {gid: groups[i]._id.toString()}
+            var gid = groups[i]._id.toString()
             g_ids.push(gid);
           }
           logger("--gids---",g_ids);
-          db.collection("groupkey_info").find({
-            $or: g_ids
-          }).toArray(function(err,DbResp){
-            if(err){
-              throw err;
-            }
-            
-            logger("groupKey-----------",DbResp);
-            Cb({groups: DbResp, error: null});
+
+          db.collection("member_start_kv").find({$and: [{ gid: { $in : g_ids }},{uid: userid}]}).toArray(function(err,DbRespa){
+            if(err)throw err;
+            let groups_kv = []
+            let start_kv_arr = []
+            DbRespa.forEach(element => {
+              // element['kv'] = element.startKv;
+              start_kv_arr.push({gid:element.gid, startKv:element.startKv});
+              delete element.startKv;
+              delete element._id;
+              delete element.uid;
+              groups_kv.push(element);
+            });
+
+            logger("GROUP_KEYS", groups_kv);
+
+            db.collection("groupkey_info").find({
+              $or: groups_kv
+            }).toArray(function(err,DbRespb){
+              if(err){
+                throw err;
+              }
+              let FinalResponse = []
+              logger("[groupkeys] DbRespb-----------",DbRespb);
+              logger("[groupkeys] DbRespb-----------",start_kv_arr);
+              start_kv_arr.forEach(mem_start => {
+                DbRespb.forEach(gkeyinfo => {
+
+                  if(mem_start.gid == gkeyinfo.gid && gkeyinfo.kv >= mem_start.startKv){
+                    FinalResponse.push(gkeyinfo);
+                  }  
+                });
+              });
+              // console.log("\nmembers list ", sendData);
+              logger("groupKey-----------",FinalResponse);
+              Cb({groups: FinalResponse, error: null});
+
+            })
 
           })
+
+          // db.collection("groupkey_info").find({
+          //   $or: g_ids
+          // }).toArray(function(err,DbResp){
+          //   if(err){
+          //     throw err;
+          //   } 
         }
 
       });
@@ -237,6 +272,14 @@ module.exports = {
               }
 
               db.collection('groupkey_info').insertOne(groupKeyInfo, function(err,groupKeyInfo_response){});
+
+              var memberStartKv ={
+                uid: uid,
+                gid: gid,
+                startKv: 0
+              }
+
+              db.collection('member_start_kv').insertOne(memberStartKv, function(err,groupKeyInfo_response){});
 
               UserLogin.GetUserGroups(socket, GroupsData => {
                 if (GroupsData.error == null) {
@@ -332,8 +375,15 @@ module.exports = {
             }
 
             db.collection("groupkey_info").insertOne(new_groupkeyinfo);
-            });     
+            memberStartKv_data = {
+              uid: uid,
+              gid: GroupInfo.GroupId,
+              startKv: latest_kv
+            }
+            db.collection("member_start_kv").insertOne(memberStartKv_data);
           });
+            }); 
+            
 
           logger(
             "______________________member Added to group__________________"
@@ -361,19 +411,37 @@ module.exports = {
             members
           );
           if (members.length > 0) {
-            common.GetUserById(members,GrpId, MemberList => {
-              logger(
-                "______________________Member List__________________",
-                MemberList
-              );
+            common.GetUserById(members, GrpId, MemberList => {
+              
 
-              var sendData = {
-                MemberList: MemberList,
-                members: DbResp[0].members
-              };
+              // remove all member locations with older kv than current users startkv for that group.
+              common.getUsersStartkv(uid, GrpId, startkv =>{
+                logger(
+                  "______________________getStartKv__________________",
+                  startkv
+                );
+                var FinalResult = []
+                MemberList.forEach(element => {
+                // getUsersStartkv(gid);  
+                if(startkv <= element.latest_kv){
+                    FinalResult.push(element);
+                 }
+                });
 
-              // console.log("\nmembers list ", sendData);
-              Cb(sendData);
+                var sendData = {
+                  MemberList: FinalResult,
+                  members: DbResp[0].members
+                };
+                logger(
+                  "______________________Member List__________________",
+                  FinalResult
+                );
+
+                // console.log("\nmembers list ", sendData);
+                Cb(sendData);
+
+              })
+              
             });
           }
         });
@@ -389,7 +457,7 @@ module.exports = {
         // , { uid: { $ne: uid } }
         $and: [{ _id: GrpId }, { uid: uid }]
       };
-      let Db_query = { $pull: { members: RmId }, $inc: {latest_kv:1} };
+      let Db_query = { $pull: { members: RmId }, $inc: {latest_kv: 1} };
       db.collection("groups").findOneAndUpdate(
         Conditon,
         Db_query,
@@ -411,6 +479,11 @@ module.exports = {
           }
 
           db.collection("groupkey_info").insertOne(new_groupkeyinfo);
+          memberStartKv_data = {
+            uid: uid,
+            gid: GroupInfo.GroupId
+          }
+          db.collection("member_start_kv").deleteOne(memberStartKv_data);
 
           Cb({ data: DbResp, uid: uid, GroupId: Member_Info.GroupId });
         }

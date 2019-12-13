@@ -1,6 +1,6 @@
 // var mongoUrl = "mongodb+srv://user:password1234@cluster0-nmkja.mongodb.net/locationsharing?retryWrites=true&w=majority";
 // var mongoUrl = "mongodb://locationsharing:mYvb73VAcnyYTe@localhost:27017/locationsharing";
-var mongoUrl = "mongodb+srv://user1:pass123456@cluster0-rzmux.mongodb.net/location?retryWrites=true&w=majority"
+var mongoUrl = "mongodb+srv://user1:pass123456@cluster0-rzmux.mongodb.net/new-server?retryWrites=true&w=majority"
 
 if (!mongoUrl) {
     console.log('PLease export mongoUrl');
