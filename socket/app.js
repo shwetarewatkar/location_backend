@@ -12,11 +12,12 @@ require("dotenv").config();
 const port = process.env.ServerPort;
 const DBport = process.env.DBport;
 const DBhost = process.env.DBhost;
+
 const DBname = process.env.DBname;
 const DBuser = process.env.DBuser;
 const DBpass = process.env.DBpass;
 // const MongoUrl = `mongodb://${DBuser}:${DBpass}@${DBhost}:${DBport}/${DBname}`;
-const MongoUrl = "mongodb+srv://user:pass123456@cluster0-ng5er.mongodb.net/test?retryWrites=true&w=majority"
+const MongoUrl = "mongodb+srv://user1:pass123456@cluster0-rzmux.mongodb.net/location?retryWrites=true&w=majority"
 // const MongoUrl = `mongodb+srv://${DBuser}:${DBpass}@cluster0-nmkja.mongodb.net/test?retryWrites=true&w=majority`
 const AtlasClient = new MongoClient(MongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 /* ----------------- .env Ends ---------------------*/
@@ -122,7 +123,9 @@ io.sockets.on("connection", socket => {
         UserLogin.AddGroup(socket, value, GroupsData => { 
           console.log("Addgroup data",value);
           logger("AddGroup Response", GroupsData);
+          socket.emit("res", { event: "AddGroupResponse", data: GroupsData.groups });
         });
+        
         break;
       case "DeleteGroup":
         logger("======================= DeleteGroup =========================");
@@ -135,10 +138,17 @@ io.sockets.on("connection", socket => {
             logger(
               "+++++++++++++++++++++ Response Sent AddMember +++++++++++++++++++++"
             );
-            socket.emit("res", {
-              event: "AddMemebrResp",
-              data: { error: null }
-            });
+            const sleep = (milliseconds) => {
+              return new Promise(resolve => setTimeout(resolve, milliseconds))
+          }
+          sleep(300).then(() => {
+              //do stuff
+              socket.emit("res", {
+                event: "AddMemebrResp",
+                data: { error: null }
+              });
+            })
+            
           } else {
             logger(
               "+++++++++++++++++++++ Response Sent Member Not Exists AddMember +++++++++++++++++++++"
@@ -255,30 +265,58 @@ io.sockets.on("connection", socket => {
 
         for(var i=0; i<value.length;i++){
 
-          UserLocationData = value[i];
+          let UserLocationData = value[i];
           UserLocationData['latest_kv'] = UserLocationData.kv;
+          delete UserLocationData._id;
           delete UserLocationData.kv;
 
-          console.log(i, " UserLocationData ", UserLocationData);
-          let Condition = { $and: [ {uid: UserLocationData.uid}, {gid: UserLocationData.gid} ]}
+          logger(i, " UserLocationData ", UserLocationData, UserLocationData.latest_kv);
+          let Condition = { uid: UserLocationData.uid, gid: UserLocationData.gid }
           let Db_query = { $set: UserLocationData };
+
+          db.collection("latest_location")
+          .find( Condition ).toArray((err, DbResp)=>{
+            logger("LATETS_LOCATION FIND DBRESP", DbResp);
+            
+              if(DbResp.length < 1){
+                db.collection("latest_location").insertOne(UserLocationData, function (err, inserted_id) { });
+                logger("[UPDATE_LOCATION] Existing record not found, inserting new location.");
+              }
+              else{
+                db.collection("latest_location")
+                .findOneAndUpdate(
+                  Condition,
+                  { $set : {latitude: UserLocationData.latitude, longitude: UserLocationData.longitude, latest_kv: UserLocationData.latest_kv}},
+                  (err, DbResp) => {
+                  if (err) throw err;
+                  // let status = DbResp.result.modifiedCount;
+                  logger("[UPDATE_LOCATION] DbRESP - ",DbResp)
+                  
+                  })
+              }
+            })
+
+  
+        
           
           // update latest location for all user groups
-          db.collection("latest_location")
-          .findOneAndUpdate(
-            Condition,
-            Db_query,
-            (err, DbResp) => {
-            if (err) throw err;
-            let status = DbResp.lastErrorObject.n;
-            if(status==1){
-              console.log("Location Updated as status=1");
-            }
-            else{
-              console.log("Location not Updated as status!=1");
-            }
+          // db.collection("latest_location")
+          // .updateOne(
+          //   Condition,
+          //   Db_query,
+          //   (err, DbResp) => {
+          //   if (err) throw err;
+          //   let status = DbResp.result.modifiedCount;
+          //   logger("[UPDATE_LOCATION] DbRESP - ",DbResp)
+          //   if(status==1){
+          //     logger("[UPDATE_LOCATION] Location Updated as status=1");
+          //   }
+          //   else{
+          //     db.collection("latest_location").insertOne(UserLocationData, function (err, inserted_id) { });
+          //     logger("[UPDATE_LOCATION] Existing record not found, inserting new location.");
+          //   }
 
-          });
+          // });
 
           // insert new location for all user groups
           db.collection('userhistory').insertOne(UserLocationData, function (err, inserted_id) { });
@@ -365,33 +403,34 @@ io.sockets.on("connection", socket => {
           .find({
             uid: value.uid.toString()
           })
-          .toArray(function (err, checkExistanceInfo) {
+          .toArray(function (err, checkExistingInfo) {
             if (err)
               console.log("Error in find location query before insert ", err);
             else {
 
-              console.log("check info:- ", checkExistanceInfo);
+              console.log("check info:- ", checkExistingInfo);
 
               myData = [];
-              checkExistanceInfo.forEach(elm => {
+              checkExistingInfo.forEach(elm => {
 
-                let decryptedData_gid = elm.gid;
-                var bytes_gid = CryptoJS.AES.decrypt(decryptedData_gid.toString(), 'Location-Sharing');
-                var get_gid = JSON.parse(bytes_gid.toString(CryptoJS.enc.Utf8));
+                // let decryptedData_gid = elm.gid;
+                // var bytes_gid = CryptoJS.AES.decrypt(decryptedData_gid.toString(), 'Location-Sharing');
+                // var get_gid = JSON.parse(bytes_gid.toString(CryptoJS.enc.Utf8));
 
-                let decryptedData_lat = elm.latitude;
-                var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), elm.gid);
-                var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
+                // let decryptedData_lat = elm.latitude;
+                // var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), elm.gid);
+                // var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
 
-                let decryptedData_long = elm.longitude;
-                var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), elm.gid);
-                var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
+                // let decryptedData_long = elm.longitude;
+                // var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), elm.gid);
+                // var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
 
                 console.log("get gid:- ", get_gid);
 
+                // add condition for member start_kv
                 if (value.gid.toString() == get_gid) {
                   console.log("get group data____________________:- ", elm);
-                  myData.push({ lat: Number(get_lat), lng: Number(get_long), cd: elm.cd })
+                  myData.push({ gid: elm.gid, latest_kv: elm.latest_kv, lat: elm.latitude, lng: elm.longitude, cd: elm.cd })
                 }
 
               });
@@ -406,7 +445,7 @@ io.sockets.on("connection", socket => {
               // console.log("all data:- ", myData);
 
               // myData = [];
-              // checkExistanceInfo.forEach(e => {
+              // checkExistingInfo.forEach(e => {
 
               //   let decryptedData_lat = e.latitude;
               //   var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), 'Location-Sharing');

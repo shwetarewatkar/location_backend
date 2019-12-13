@@ -61,6 +61,7 @@ exports.addLocation = function (req, res) {
                                         default: true,
                                         members: [postdata.uid],
                                         shareid: randomno,
+                                        latest_kv: 0,
                                         date: new Date()
                                     }
 
@@ -167,6 +168,7 @@ exports.addLocation = function (req, res) {
                                         default: true,
                                         members: [postdata.uid],
                                         shareid: randomno,
+                                        latest_kv: 0,
                                         date: new Date()
                                     }
 

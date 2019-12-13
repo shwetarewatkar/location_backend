@@ -129,6 +129,7 @@ module.exports = {
         Cb({ groups: DbResp, error: null });
 
       });
+
     } else {
       logger("______________________user not loggedin__________________");
       Cb({ error: "user not loggedin" });
@@ -144,20 +145,36 @@ module.exports = {
       var bytes_uid = CryptoJS.AES.decrypt(uid.toString(), 'Location-Sharing');
       var userid = JSON.parse(bytes_uid.toString(CryptoJS.enc.Utf8));
       console.log("userid",userid);
+      
+      UserLogin.GetUserGroups(socket, GroupsData => {
+        if (GroupsData.error == null) {
+          logger("user_groups", GroupsData.groups);
+          
+          var groups = GroupsData.groups;
+          var g_ids = [];
+          
+          for(var i=0;i<groups.length;i++){
+            var gid = {gid: groups[i]._id.toString()}
+            g_ids.push(gid);
+          }
+          logger("--gids---",g_ids);
+          db.collection("groupkey_info").find({
+            $or: g_ids
+          }).toArray(function(err,DbResp){
+            if(err){
+              throw err;
+            }
+            
+            logger("groupKey-----------",DbResp);
+            Cb({groups: DbResp, error: null});
 
-      // db.collection("groupkey_info").find().toArray( function(err, docs) {
-      //   if (err) {
-      //     logger("all_groupkeyinfo----",docs);
-      //   }});
-
-      db.collection("groupkey_info")
-      .find({ uid: userid}).toArray(function(err,DbResp){
-        if(err){
-          throw err;
+          })
         }
-        logger("groupKey-----------",DbResp);
-        Cb({groups: DbResp, error: null});
+
       });
+
+
+      
     }
     else{
       logger("______________________user not logged in__________________");
@@ -182,6 +199,7 @@ module.exports = {
               default: false,
               members: [uid],
               shareid: randomno,
+              latest_kv: 0,
               date: new Date()
             },
             (err, DbResp) => {
@@ -206,15 +224,7 @@ module.exports = {
 
               var gid = DbResp.insertedId.toString();
 
-              var latest_location_data = {
-                uid: uid,
-                gid: gid,
-                latitude: "",
-                longitude: "",
-                latest_kv: 0
-              }
-
-              db.collection('latest_location').insertOne(latest_location_data, function (err, latest_location_resp) { });
+              
               var randomno2 = randomString(10, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
               var groupKey = CryptoJS.AES.encrypt(JSON.stringify(randomno2),'Location-Sharing');
               var encrypted_groupKey = groupKey.toString();
@@ -268,6 +278,9 @@ module.exports = {
             logger(
               "+++++++++++++++++++++ Response Sent RemoveGroup +++++++++++++++++++++"
             );
+            
+            
+            
 
             socket.emit("res", {
               event: "GroupList",
@@ -277,7 +290,10 @@ module.exports = {
         });
         // Cb();
       }
+
     );
+
+
   },
 
   AddMember: (socket, GroupInfo, Cb) => {
@@ -285,69 +301,46 @@ module.exports = {
     if (uid) {
       let GroupId = ObjectId(GroupInfo.GroupId);
       // let InviteCode = parseInt(GroupInfo.InviteCode);
-      let InviteCode = GroupInfo.InviteCode;
-      common.GetUserByInvite(InviteCode, DbResp => {
-        if (DbResp.length > 0) {
-          let AddMemberId = DbResp[0].uid;
-          let MemberLat = DbResp[0].latitude;
-          let MemberLong = DbResp[0].longitude;
+      // let InviteCode = GroupInfo.InviteCode;
+  
+      // let AddMemberId = uid;
 
-          db.collection("groups").updateOne(
-            { _id: GroupId },
-            { $addToSet: { members: AddMemberId } },
-            (err, DbResp) => {
-              console.log("lols", DbResp.result);
+      console.log("[ADD MEMBER] uid: ",uid);
+      console.log("[ADD MEMBER] gid: ",GroupId);
 
-              var group_ciphertext_key = CryptoJS.AES.encrypt(JSON.stringify(GroupId), 'Location-Sharing');
-              var group_key = group_ciphertext_key.toString();
+      db.collection("groups").updateOne(
+        { _id: GroupId },
+        { $addToSet: { members: uid }, $inc: { latest_kv: 1 } },
+        (err, DbResp) => {
+          console.log("groups update",DbResp.result);
 
+          db.collection("groups").find({_id: GroupId}).toArray((err,DbResp)=>{
+            if(err)console.log(err);
 
-              let decryptedData_lat = MemberLat;
-              var bytes_lat = CryptoJS.AES.decrypt(decryptedData_lat.toString(), 'Location-Sharing');
-              var get_lat = JSON.parse(bytes_lat.toString(CryptoJS.enc.Utf8));
-
-              let decryptedData_long = MemberLong;
-              var bytes_long = CryptoJS.AES.decrypt(decryptedData_long.toString(), 'Location-Sharing');
-              var get_long = JSON.parse(bytes_long.toString(CryptoJS.enc.Utf8));
-
-              var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_lat), group_key);
-              var new_latitude = latitude_ciphertext.toString();
-
-              var longitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(get_long), group_key);
-              var new_longitude = longitude_ciphertext.toString();
-
-              var newgroupdata = {
-                uid: AddMemberId,
-                gid: group_key,
-                latitude: new_latitude,
-                longitude: new_longitude,
-              }
-
-              db.collection('groupsinfo').insertOne(newgroupdata, function (err, newGroupData) { });
-
-              if (err) throw err;
-
-              if (DbResp.result.n >= 1 && DbResp.result.nModified == 0) {
-                Cb({
-                  error: "Entered invite code is already exist this group."
-                });
-              }
-              logger(
-                "______________________member Added to group__________________"
-              );
-              Cb({ error: null });
+            console.log("[ADD MEMBER] new group obj ",DbResp[0]);
+            var latest_kv = parseInt(DbResp[0].latest_kv);
+            var randomno2 = randomString(10, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+            
+            var groupKey = CryptoJS.AES.encrypt(JSON.stringify(randomno2),'Location-Sharing');
+            var encrypted_groupKey = groupKey.toString();
+            
+            new_groupkeyinfo = {
+              uid: uid,
+              gid: GroupInfo.GroupId,
+              gkey: encrypted_groupKey,
+              kv: latest_kv
             }
+
+            db.collection("groupkey_info").insertOne(new_groupkeyinfo);
+            });     
+          });
+
+          logger(
+            "______________________member Added to group__________________"
           );
-        } else {
-          logger("______________________member not found__________________");
-          Cb({ error: "Entered invite code is incorrect" });
+          Cb({ error: null });
         }
-      });
-    } else {
-      //session not found
-      logger("______________________not logged in__________________");
-    }
-  },
+    },
 
   GetGroupMembers: (socket, GroupInfo, Cb) => {
     let uid = GroupInfo.uid;
@@ -396,7 +389,7 @@ module.exports = {
         // , { uid: { $ne: uid } }
         $and: [{ _id: GrpId }, { uid: uid }]
       };
-      let Db_query = { $pull: { members: RmId } };
+      let Db_query = { $pull: { members: RmId }, $inc: {latest_kv:1} };
       db.collection("groups").findOneAndUpdate(
         Conditon,
         Db_query,
@@ -407,6 +400,18 @@ module.exports = {
             "______________________Member removed__________________",
             RmId
           );
+          
+          // kv=+1
+            // change Group Key
+          new_groupkeyinfo = {
+            uid: uid,
+            gid: GroupInfo.GroupId,
+            gkey: encrypted_groupKey,
+            kv: latest_kv
+          }
+
+          db.collection("groupkey_info").insertOne(new_groupkeyinfo);
+
           Cb({ data: DbResp, uid: uid, GroupId: Member_Info.GroupId });
         }
       );

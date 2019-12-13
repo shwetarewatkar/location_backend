@@ -9,6 +9,14 @@ module.exports = {
         Cb(DbResp);
       });
   },
+  GetUserByUid: (uid, Cb) => {
+    db.collection("userdetails")
+      .find({ uid: uid })
+      .toArray((err, DbResp) => {
+        if (err) throw err;
+        Cb(DbResp);
+      });
+  },
 
   GetUserById: (Members, groupId, Cb) => {
     
@@ -26,7 +34,9 @@ module.exports = {
 
         {
           $match:{
-              $and:[{$or: Members},{gid:groupId.toString()}]
+            $and:
+              [{$or: Members},
+              {gid: groupId.toString()}]
           }
         },
 
