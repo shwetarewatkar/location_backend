@@ -226,7 +226,7 @@ module.exports = {
               if (lat.length != 0) {
                 if (lat != get_lat && long != get_long) {
 
-                  console.log("update karo");
+                  
 
                   var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(lat), elm.gid);
                   var new_latitude = latitude_ciphertext.toString();
@@ -283,7 +283,6 @@ module.exports = {
 
           // if (value.plain_lat != get_lat && value.plain_long != get_long) {
 
-          //   console.log("update karo");
 
           //   var latitude_ciphertext = CryptoJS.AES.encrypt(JSON.stringify(value.plain_lat), checkExistanceInfo[0].gid);
           //   var new_latitude = latitude_ciphertext.toString();
