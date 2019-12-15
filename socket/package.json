@@ -8,13 +8,14 @@
     "start": "app.js"
   },
   "repository": {
-    "type": "git",
-    "url": "http://gitlab.artoon.in/node-js/location-sharing.git"
+    "type": "git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.589.0",
+    "crypto": "^1.0.1",
     "crypto-js": "^3.1.9-1",
     "dotenv": "^8.1.0",
     "fs": "0.0.1-security",
