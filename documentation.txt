@@ -1,11 +1,4 @@
 # Location Sharing
-
-## Root Access
-
-- Server : 34.93.36.156
-- User : root
-- Password : NiAB%2)+aj2%advf
-
 ## Admin Panel
 
 - Url : [location.artoon.in](#)
