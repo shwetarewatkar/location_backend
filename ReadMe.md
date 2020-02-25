@@ -1,12 +1,5 @@
 # Location Sharing
 
-## Root Access
-
-- Server : 34.217.248.47
-- User : root
-- Password : \*fb69BV%e3N\*&9Fq5$
- 
-
 ## Certificates 
 
 CertificateFile /etc/letsencrypt/live/ls.shwetarewatkar.com/fullchain.pem
